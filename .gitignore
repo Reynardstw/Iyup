@@ -30,5 +30,5 @@ xcuserdata/
 !.env.example
 Config/Signing.local.xcconfig
 
-# CocoaPods, kalau tidak mau commit Pods
+# CocoaPods
 Pods/

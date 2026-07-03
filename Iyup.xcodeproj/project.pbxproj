@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F11A04312FF797CB00FBB280 /* SunKit in Frameworks */ = {isa = PBXBuildFile; productRef = F11A04302FF797CB00FBB280 /* SunKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		F11A03EA2FF7975C00FBB280 /* Iyup.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Iyup.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F11A04312FF797CB00FBB280 /* SunKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = Iyup;
 			packageProductDependencies = (
+				F11A04302FF797CB00FBB280 /* SunKit */,
 			);
 			productName = Iyup;
 			productReference = F11A03EA2FF7975C00FBB280 /* Iyup.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = F11A03E12FF7975C00FBB280;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F11A042F2FF797CB00FBB280 /* XCRemoteSwiftPackageReference "SunKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F11A03EB2FF7975C00FBB280 /* Products */;
 			projectDirPath = "";
@@ -332,6 +341,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F11A042F2FF797CB00FBB280 /* XCRemoteSwiftPackageReference "SunKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SunKit-Swift/SunKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F11A04302FF797CB00FBB280 /* SunKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F11A042F2FF797CB00FBB280 /* XCRemoteSwiftPackageReference "SunKit" */;
+			productName = SunKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F11A03E22FF7975C00FBB280 /* Project object */;
 }

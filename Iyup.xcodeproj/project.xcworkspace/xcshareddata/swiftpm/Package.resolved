@@ -1,0 +1,15 @@
+{
+  "originHash" : "c10bfda1edeb2a721758314d15480d230c034654930d62105659e56ad9ed9966",
+  "pins" : [
+    {
+      "identity" : "sunkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SunKit-Swift/SunKit",
+      "state" : {
+        "revision" : "a18a6f780770680f4f2ffe3488a1f3b335ec5ff6",
+        "version" : "2.8.2"
+      }
+    }
+  ],
+  "version" : 3
+}

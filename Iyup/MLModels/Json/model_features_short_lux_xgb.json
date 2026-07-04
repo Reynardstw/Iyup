@@ -1,0 +1,35 @@
+{
+  "model_kind": "xgboost.XGBRegressor",
+  "model_file": "model_short_lux_xgb.joblib",
+  "coreml_file": "ModelShortLux.mlmodel",
+  "target": "lux",
+  "features_ordered": [
+    "spot_num",
+    "horizon",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "is_holiday",
+    "shadow_status",
+    "shadow_status_future",
+    "sun_altitude",
+    "sun_altitude_future",
+    "cloud_cover",
+    "cloud_forecast_future",
+    "lux",
+    "lux_lag_15m",
+    "lux_lag_30m",
+    "lux_lag_60m",
+    "lux_rollmean_30m",
+    "lux_trend"
+  ],
+  "spot_mapping": {
+    "Spot_A": 0,
+    "Spot_B": 1,
+    "Spot_C": 2,
+    "Spot_D": 3,
+    "Spot_E": 4,
+    "Spot_F": 5
+  },
+  "notes": "spot_id string harus dikonversi ke spot_num memakai spot_mapping sebelum inference."
+}

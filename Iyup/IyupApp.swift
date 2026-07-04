@@ -11,7 +11,8 @@ import SwiftUI
 struct IyupApp: App {
     var body: some Scene {
         WindowGroup {
-            ShadeMapView()
+            ContentView()
+            
         }
     }
 }

@@ -1,21 +1,61 @@
-//
-//  ContentView.swift
-//  Iyup
-//
-//  Created by Reynard Setiawan on 03/07/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @State private var viewModel: MLShadeRecommendationViewModel
+
+    @MainActor
+    init() {
+        _viewModel = State(
+            initialValue: MLShadeRecommendationDemoFactory.makeViewModel()
+        )
+    }
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            Tab("Deterministik", systemImage: "cloud.sun") {
+                DeterministicShadowView(viewModel: viewModel)
+            }
+
+            Tab("Ranking ML", systemImage: "sparkles") {
+                MLShadeRankingView(viewModel: viewModel)
+            }
+
+            Tab("Shade Map", systemImage: "map") {
+                ShadeMapView()
+            }
         }
-        .padding()
+        .task {
+            let debugRunID = "AUTO-" + String(UUID().uuidString.prefix(8))
+            await viewModel.calculate(debugRunID: debugRunID)
+        }
+    }
+}
+
+struct ShadeIntervalSection: View {
+    @Bindable var viewModel: MLShadeRecommendationViewModel
+
+    var body: some View {
+        Section("Interval") {
+            DatePicker(
+                "Mulai",
+                selection: $viewModel.startDate,
+                displayedComponents: [.hourAndMinute]
+            )
+
+            DatePicker(
+                "Selesai",
+                selection: $viewModel.endDate,
+                displayedComponents: [.hourAndMinute]
+            )
+
+            Button("Hitung") {
+                let debugRunID = "BTN-" + String(UUID().uuidString.prefix(8))
+                Task {
+                    await viewModel.calculate(debugRunID: debugRunID)
+                }
+            }
+            .disabled(viewModel.isCalculating)
+        }
     }
 }
 

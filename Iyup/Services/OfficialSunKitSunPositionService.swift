@@ -2,11 +2,11 @@ import Foundation
 import CoreLocation
 import SunKit
 
-/// Adapter resmi untuk package SunKit-Swift/SunKit.
-///
-/// SunKit hanya menghitung posisi matahari, yaitu altitude dan azimuth.
-/// Logic bayangan tetap dihitung oleh ShadowIntervalCalculator melalui
-/// SunVectorConverter + ShadowRaycastProviding.
+
+
+
+
+
 struct OfficialSunKitSunPositionService: SunPositionProviding {
     func position(
         at date: Date,

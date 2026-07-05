@@ -1,10 +1,10 @@
 import Foundation
 
-/// Combines deterministic shadow output with ML/environment forecasts.
-///
-/// Existing deterministic pipeline stays intact:
-/// ShadeRecommendationEngine -> [ShadowIntervalResult]
-/// This service only adds the final scoring layer on top.
+
+
+
+
+
 struct MLShadeEnvironmentScoringEngine: Sendable {
     private let forecastService: any MLShadeEnvironmentForecastProviding
     private let scoringService: MLShadeScoringService
@@ -92,7 +92,7 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
         let meanLux = forecastPoints.map(\.lux).reduce(0.0, +) / count
         let meanTemperature = forecastPoints.map(\.temperatureCelsius).reduce(0.0, +) / count
 
-        // Conservative: crowd penalty follows the most crowded prediction in the interval.
+        
         let maxOccupancy = forecastPoints.map(\.occupancy).max() ?? 0.0
 
         let stability = scoringService.shadeStability(timeline: shadowResult.timeline)

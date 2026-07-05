@@ -1,9 +1,9 @@
 import Foundation
 
-/// Forecast provider used by MLShadeEnvironmentScoringEngine.
-///
-/// The deterministic shadow pipeline produces ShadowIntervalResult first.
-/// This protocol adds environment prediction points on top of that timeline.
+
+
+
+
 protocol MLShadeEnvironmentForecastProviding: Sendable {
     func forecast(
         for shadowResult: ShadowIntervalResult,

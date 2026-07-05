@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// View untuk cabang DETERMINISTIK saja.
-///
-/// Menampilkan hasil mentah pipeline shadow (SunKit + raycast):
-/// timeline teduh/panas, shadow score, durasi, dan safety status.
-/// Tidak menyentuh hasil ML sama sekali.
+
+
+
+
+
 struct DeterministicShadowView: View {
     @Bindable var viewModel: MLShadeRecommendationViewModel
 
@@ -46,7 +46,7 @@ struct DeterministicShadowView: View {
     }
 }
 
-// MARK: - Row
+
 
 private struct ShadowResultRow: View {
     let result: ShadowIntervalResult

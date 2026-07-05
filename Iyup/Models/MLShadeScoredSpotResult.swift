@@ -1,9 +1,9 @@
 import Foundation
 
-/// Final recommendation result after deterministic shadow result is combined
-/// with environment forecast output and rule-based scoring.
-///
-/// This wraps ShadowIntervalResult. It does not replace the existing shadow-only result.
+
+
+
+
 struct MLShadeScoredSpotResult: Identifiable, Equatable, Sendable {
     let id = UUID()
 

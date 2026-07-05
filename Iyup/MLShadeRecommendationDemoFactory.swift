@@ -1,12 +1,12 @@
 import Foundation
 import simd
 
-/// Demo composition for preview and early integration.
-///
-/// `makeViewModel()` tries to use the real XGBoost Core ML service first.
-/// If the model/JSON resources are not bundled correctly yet, it falls back to
-/// the mock forecast provider so the UI can still run and show the wiring error
-/// in the console.
+
+
+
+
+
+
 @MainActor
 enum MLShadeRecommendationDemoFactory {
     static func makeViewModel() -> MLShadeRecommendationViewModel {
@@ -49,8 +49,8 @@ enum MLShadeRecommendationDemoFactory {
             timeZoneIdentifier: "Asia/Jakarta"
         )
 
-        // IDs intentionally use the same normalized names as the XGBoost mapping:
-        // Spot_A, Spot_B, Spot_C, ...
+        
+        
         let spots = [
             ParkSpot(id: "Spot_A", name: "Spot A", position: SIMD3<Float>(0.0, 0.1, 0.0)),
             ParkSpot(id: "Spot_B", name: "Spot B", position: SIMD3<Float>(3.0, 0.1, 1.0)),

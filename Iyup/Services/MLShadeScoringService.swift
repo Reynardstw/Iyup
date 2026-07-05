@@ -1,9 +1,9 @@
 import Foundation
 
-/// Rule-based scoring service for interval recommendation.
-///
-/// The ML output is not the final decision. It is converted into scores first,
-/// then combined with deterministic ShadowForecastScore.
+
+
+
+
 struct MLShadeScoringService: Sendable {
     struct Weights: Sendable {
         let shadowForecast: Double

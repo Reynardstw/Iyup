@@ -1,13 +1,13 @@
 import Foundation
 import CoreML
 
-/// Core ML implementation for the ML shade add-on.
-///
-/// This version is aligned with the XGBoost export:
-/// - Uses six individual `model_features_*_xgb.json` files.
-/// - Uses `spot_num`, not `spot_id`, as model input.
-/// - Loads the six `Model*.mlmodel` files.
-/// - Keeps safe defaults for sensor/history values so initial integration does not crash.
+
+
+
+
+
+
+
 final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @unchecked Sendable {
     private enum ModelKey: String, CaseIterable, Sendable {
         case shortLux = "short_lux"
@@ -300,12 +300,12 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         let components = calendar.dateComponents([.hour, .minute, .weekday], from: entry.sampleDate)
         let hour = Double(components.hour ?? 0) + Double(components.minute ?? 0) / 60.0
 
-        // Calendar weekday: Sunday = 1. Convert to Python/pandas dayofweek: Monday = 0 ... Sunday = 6.
+        
         let dayOfWeek = Double(((components.weekday ?? 1) + 5) % 7)
         let horizonMinutes = max(entry.sampleDate.timeIntervalSince(referenceDate) / 60.0, 0.0)
         let leadDays = max(1.0, min(7.0, ceil(entry.sampleDate.timeIntervalSince(referenceDate) / 86_400.0)))
 
-        // XGBoost model input is `spot_num`, not `spot_id`.
+        
         features["spot_num"] = Double(spotNumber)
         features["hour"] = hour
         features["day_of_week"] = dayOfWeek

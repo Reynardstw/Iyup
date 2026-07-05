@@ -1,11 +1,5 @@
 import SwiftUI
 
-/// Composition root.
-///
-/// ContentView memegang SATU ViewModel bersama dan membaginya ke dua view
-/// terpisah lewat TabView. ViewModel harus satu karena pipeline-nya
-/// berurutan: hasil shadow deterministik adalah input untuk scoring ML —
-/// satu kali "Hitung" mengisi kedua tab.
 struct ContentView: View {
     @State private var viewModel: MLShadeRecommendationViewModel
 
@@ -25,9 +19,11 @@ struct ContentView: View {
             Tab("Ranking ML", systemImage: "sparkles") {
                 MLShadeRankingView(viewModel: viewModel)
             }
+
+            Tab("Shade Map", systemImage: "map") {
+                ShadeMapView()
+            }
         }
-        // Auto-calculate sekali saat root muncul — bukan di masing-masing
-        // view, supaya pindah tab tidak memicu kalkulasi ulang.
         .task {
             let debugRunID = "AUTO-" + String(UUID().uuidString.prefix(8))
             await viewModel.calculate(debugRunID: debugRunID)
@@ -35,10 +31,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Shared: kontrol interval + tombol hitung
-
-/// Dipakai oleh kedua view. Binding-nya menunjuk ke ViewModel bersama,
-/// jadi mengubah jam di satu tab otomatis tersinkron di tab lain.
 struct ShadeIntervalSection: View {
     @Bindable var viewModel: MLShadeRecommendationViewModel
 

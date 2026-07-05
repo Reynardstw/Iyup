@@ -1,10 +1,10 @@
 import Foundation
 import Observation
 
-/// ViewModel for ML-enhanced shade recommendation.
-///
-/// This is intentionally a new type, not a replacement for ShadeRecommendationViewModel,
-/// so the existing shadow-only feature can remain in the project without name conflicts.
+
+
+
+
 @MainActor
 @Observable
 final class MLShadeRecommendationViewModel {

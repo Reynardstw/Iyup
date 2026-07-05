@@ -1,7 +1,7 @@
 import Foundation
 
-/// Error for the ML/environment forecast add-on only.
-/// Kept separate from ShadowCalculationError because the shadow pipeline is deterministic.
+
+
 enum MLShadeForecastError: LocalizedError {
     case manifestNotFound
     case modelUnavailable(String)

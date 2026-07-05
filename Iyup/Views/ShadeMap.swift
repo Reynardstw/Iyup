@@ -48,22 +48,22 @@ struct ShadeMapView: View {
     }
 
     private var skyGradient: LinearGradient {
-        let f = dayFactor
+        let factor = dayFactor
 
-        let top = Color(
-            red: 0.05 + 0.35 * f,
-            green: 0.07 + 0.45 * f,
-            blue: 0.12 + 0.55 * f
+        let topColor = Color(
+            red: 0.05 + 0.35 * factor,
+            green: 0.07 + 0.45 * factor,
+            blue: 0.12 + 0.55 * factor
         )
 
-        let bottom = Color(
-            red: 0.03 + 0.20 * f,
-            green: 0.04 + 0.28 * f,
-            blue: 0.08 + 0.38 * f
+        let bottomColor = Color(
+            red: 0.03 + 0.20 * factor,
+            green: 0.04 + 0.28 * factor,
+            blue: 0.08 + 0.38 * factor
         )
 
         return LinearGradient(
-            colors: [top, bottom],
+            colors: [topColor, bottomColor],
             startPoint: .top,
             endPoint: .bottom
         )
@@ -123,14 +123,6 @@ final class ParkScene {
 
     private let sunPositionService = OfficialSunKitSunPositionService()
 
-    /// Penting:
-    /// Kode lama kamu memakai:
-    /// z = -cos(alt) * cos(az)
-    ///
-    /// Jadi di logic baru kita pakai `.northNegative`
-    /// agar arah visual matahari tetap konsisten dengan scene lama.
-    ///
-    /// Kalau nanti arah bayangan kebalik, ubah ke `.northPositive`.
     private let sunVectorConverter = SunVectorConverter(
         zAxisDirection: .northNegative
     )
@@ -138,51 +130,23 @@ final class ParkScene {
     func build() async -> Entity {
         container.addChild(worldRoot)
 
-        sunLight.light.color = .white
-        sunLight.shadow = DirectionalLightComponent.Shadow(
-            maximumDistance: 8,
-            depthBias: 1.0
-        )
-        container.addChild(sunLight)
-
-        fillLight.light.color = .white
-        fillLight.look(
-            at: [0, 0, 0],
-            from: [-3, 6, -2],
-            relativeTo: nil
-        )
-        container.addChild(fillLight)
+        setupSunLight()
+        setupFillLight()
 
         guard let url = Bundle.main.url(
             forResource: "checkpoint_final_4",
             withExtension: "usda"
         ) else {
-            print("checkpoint1.usda tidak ditemukan di bundle")
+            print("checkpoint_final_4.usda tidak ditemukan di bundle")
             return container
         }
 
         do {
             let park = try await Entity(contentsOf: url)
             worldRoot.addChild(park)
-
-            let bounds = park.visualBounds(relativeTo: worldRoot)
-            let center = bounds.center
-            let extents = bounds.extents
-
-            addTrees(
-                boundsMin: bounds.min,
-                boundsMax: bounds.max,
-                groundY: bounds.min.y
-            )
-
-            let longest = max(extents.x, extents.z)
-            let scale = longest > 0 ? (6.0 / longest) : 1.0
-
-            worldRoot.scale = [scale, scale, scale]
-            worldRoot.position = -center * scale
-            targetWorld = .zero
+            normalizeParkScale(park)
         } catch {
-            print("Gagal load checkpoint1.usda: \(error.localizedDescription)")
+            print("Gagal load checkpoint_final_4.usda: \(error.localizedDescription)")
         }
 
         return container
@@ -201,21 +165,23 @@ final class ParkScene {
             max(0, min(1, sin(sun.altitudeDegrees * .pi / 180)))
         )
 
-        if sun.altitudeDegrees <= 0 {
+        guard sun.altitudeDegrees > 0 else {
             sunLight.light.intensity = 0
-        } else {
-            sunLight.light.intensity = 500 + 2300 * altitudeFactor
-
-            let sunDirection = sunVectorConverter.directionVector(
-                from: sun
-            )
-
-            sunLight.look(
-                at: targetWorld,
-                from: targetWorld + sunDirection,
-                relativeTo: nil
-            )
+            fillLight.light.intensity = 30
+            return
         }
+
+        sunLight.light.intensity = 500 + 2300 * altitudeFactor
+
+        let sunDirection = sunVectorConverter.directionVector(
+            from: sun
+        )
+
+        sunLight.look(
+            at: targetWorld,
+            from: targetWorld + sunDirection,
+            relativeTo: nil
+        )
 
         fillLight.light.intensity = 30 + 120 * altitudeFactor
     }
@@ -241,73 +207,38 @@ final class ParkScene {
         }
     }
 
-    private func addTrees(
-        boundsMin: SIMD3<Float>,
-        boundsMax: SIMD3<Float>,
-        groundY: Float
-    ) {
-        let fractions: [(Float, Float)] = [
-            (0.45, 0.08), (0.55, 0.14), (0.42, 0.20), (0.58, 0.26),
-            (0.40, 0.33), (0.60, 0.39), (0.44, 0.46), (0.56, 0.52),
-            (0.38, 0.58), (0.62, 0.64), (0.46, 0.70), (0.54, 0.76),
-            (0.42, 0.82), (0.58, 0.88), (0.50, 0.94),
-            (0.35, 0.30), (0.65, 0.50), (0.33, 0.66), (0.67, 0.78)
-        ]
+    private func setupSunLight() {
+        sunLight.light.color = .white
+        sunLight.shadow = DirectionalLightComponent.Shadow(
+            maximumDistance: 8,
+            depthBias: 1.0
+        )
 
-        let sizeX = boundsMax.x - boundsMin.x
-        let sizeZ = boundsMax.z - boundsMin.z
+        container.addChild(sunLight)
+    }
 
-        for (index, fraction) in fractions.enumerated() {
-            let x = boundsMin.x + sizeX * fraction.0
-            let z = boundsMin.z + sizeZ * fraction.1
+    private func setupFillLight() {
+        fillLight.light.color = .white
+        fillLight.look(
+            at: [0, 0, 0],
+            from: [-3, 6, -2],
+            relativeTo: nil
+        )
 
-            let height = Float.random(in: 12...24)
-            let trunkRadius = Float.random(in: 0.20...0.45)
-            let crownRadius = max(height * 0.34, 1.2)
+        container.addChild(fillLight)
+    }
 
-            let tree = Entity()
-            tree.name = String(format: "Pohon_%02d", index + 1)
+    private func normalizeParkScale(_ park: Entity) {
+        let bounds = park.visualBounds(relativeTo: worldRoot)
+        let center = bounds.center
+        let extents = bounds.extents
 
-            let trunkHeight = height * 0.50
+        let longestSide = max(extents.x, extents.z)
+        let scale = longestSide > 0 ? 6.0 / longestSide : 1.0
 
-            let trunk = ModelEntity(
-                mesh: .generateCylinder(
-                    height: trunkHeight,
-                    radius: trunkRadius
-                ),
-                materials: [
-                    SimpleMaterial(
-                        color: .brown,
-                        roughness: 0.9,
-                        isMetallic: false
-                    )
-                ]
-            )
-            trunk.position = [0, trunkHeight / 2, 0]
-
-            let crown = ModelEntity(
-                mesh: .generateSphere(radius: crownRadius),
-                materials: [
-                    SimpleMaterial(
-                        color: .init(
-                            red: 0.22,
-                            green: 0.55,
-                            blue: 0.22,
-                            alpha: 1
-                        ),
-                        roughness: 0.95,
-                        isMetallic: false
-                    )
-                ]
-            )
-            crown.position = [0, trunkHeight + crownRadius * 0.75, 0]
-
-            tree.addChild(trunk)
-            tree.addChild(crown)
-            tree.position = [x, groundY, z]
-
-            worldRoot.addChild(tree)
-        }
+        worldRoot.scale = [scale, scale, scale]
+        worldRoot.position = -center * scale
+        targetWorld = .zero
     }
 
     static func jakartaDate(hour: Int) -> Date {

@@ -6,8 +6,8 @@ enum SceneZAxisDirection: Sendable {
     case northNegative
 }
 
-/// Converts altitude/azimuth into a 3D vector.
-/// Assumption: X = East, Y = Up, Z = North unless configured otherwise.
+
+
 struct SunVectorConverter {
     let zAxisDirection: SceneZAxisDirection
 

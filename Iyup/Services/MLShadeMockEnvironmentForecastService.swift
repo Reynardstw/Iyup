@@ -1,7 +1,7 @@
 import Foundation
 
-/// Lightweight fallback forecast provider for previews and for cases where the
-/// Core ML resources are not bundled yet.
+
+
 struct MLShadeMockEnvironmentForecastService: MLShadeEnvironmentForecastProviding {
     func forecast(
         for shadowResult: ShadowIntervalResult,

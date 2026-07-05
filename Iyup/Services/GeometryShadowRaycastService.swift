@@ -7,8 +7,8 @@ struct ShadowOccluderSphere: Identifiable, Equatable, Sendable {
     let radius: Float
 }
 
-/// Geometry-only raycast service for validating the algorithm before connecting RealityKit.
-/// Each occluder is represented as a sphere.
+
+
 struct GeometryShadowRaycastService: ShadowRaycastProviding {
     let occluders: [ShadowOccluderSphere]
 

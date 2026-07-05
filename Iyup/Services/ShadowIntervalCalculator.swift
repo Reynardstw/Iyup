@@ -57,7 +57,7 @@ struct ShadowIntervalCalculator {
                         sunDirection: sunDirection
                     )
                 } else {
-                    // At night or below the horizon, there is no direct sunlight.
+                    
                     isShaded = true
                 }
 

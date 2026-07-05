@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// View untuk cabang ML saja.
-///
-/// Menampilkan ranking final hasil MLShadeEnvironmentScoringEngine:
-/// finalScore (shadow + lux + suhu + stabilitas, dikali penalti occupancy),
-/// beserta prediksi lingkungan per spot.
+
+
+
+
+
 struct MLShadeRankingView: View {
     @Bindable var viewModel: MLShadeRecommendationViewModel
 
@@ -49,7 +49,7 @@ struct MLShadeRankingView: View {
     }
 }
 
-// MARK: - Row
+
 
 private struct ScoredResultRow: View {
     let rank: Int

@@ -34,10 +34,10 @@ App
 ↓
 Features
 ↓
-Core
+Shared
 ```
 
-Feature tidak perlu saling import secara langsung. Kontrak lintas feature diletakkan di `Core/Protocols`.
+Feature tidak perlu saling import secara langsung. Kontrak lintas feature diletakkan di `Shared/Protocols`.
 
 ## Resource
 - `Features/ML/Resources` menyimpan model ML dan JSON karena resource tersebut spesifik fitur ML.

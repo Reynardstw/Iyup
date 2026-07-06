@@ -5,6 +5,9 @@ struct ShadeMapView: View {
     @State private var hour: Double = 10
     @State private var scene = ParkScene()
 
+    @State private var lastDrag: CGSize = .zero
+    @State private var lastMagnification: CGFloat = 1.0
+
     private let parkLocation = ParkLocation(
         latitude: -6.245542,
         longitude: 106.794547,
@@ -29,11 +32,41 @@ struct ShadeMapView: View {
                     location: parkLocation
                 )
             }
-            .realityViewCameraControls(.orbit)
             .ignoresSafeArea()
+            .gesture(orbitGesture)
+            .simultaneousGesture(zoomGesture)
 
             controls
         }
+    }
+
+    private var orbitGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                let deltaX = Float(value.translation.width - lastDrag.width)
+                let deltaY = Float(value.translation.height - lastDrag.height)
+                lastDrag = value.translation
+
+                scene.rotateCamera(
+                    deltaAzimuth: -deltaX * 0.01,
+                    deltaElevation: deltaY * 0.01
+                )
+            }
+            .onEnded { _ in
+                lastDrag = .zero
+            }
+    }
+
+    private var zoomGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                let ratio = Float(value.magnification / lastMagnification)
+                lastMagnification = value.magnification
+                scene.zoomCamera(scale: ratio)
+            }
+            .onEnded { _ in
+                lastMagnification = 1.0
+            }
     }
 
     private var sun: SunPosition {
@@ -70,13 +103,10 @@ struct ShadeMapView: View {
     }
 
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Taman Bendera Pusaka 3D")
-                .font(.headline)
-
-            Text("Tanggal demo: 7 Mar 2026")
-                .font(.caption2)
-                .opacity(0.85)
+                .font(.subheadline)
+                .bold()
 
             Text(
                 String(
@@ -86,27 +116,24 @@ struct ShadeMapView: View {
                     sun.azimuthDegrees
                 )
             )
-            .font(.caption)
+            .font(.caption2)
 
-            HStack {
+            HStack(spacing: 8) {
                 Text("06")
-                    .font(.caption)
+                    .font(.caption2)
 
                 Slider(value: $hour, in: 6...18, step: 1)
 
                 Text("18")
-                    .font(.caption)
+                    .font(.caption2)
             }
-
-            Text("Jam: \(Int(hour.rounded())):00")
-                .font(.caption)
-                .bold()
         }
-        .padding(12)
+        .padding(10)
         .background(Color.black.opacity(0.72))
         .foregroundColor(.white)
         .cornerRadius(14)
-        .padding(.top, 50)
+        .frame(maxWidth: 260)
+        .padding(.top, 8)
         .padding(.horizontal, 12)
     }
 }

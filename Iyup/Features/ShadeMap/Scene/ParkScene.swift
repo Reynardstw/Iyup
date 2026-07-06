@@ -1,5 +1,6 @@
 import Foundation
 import RealityKit
+import UIKit
 
 @MainActor
 final class ParkScene {
@@ -98,7 +99,7 @@ final class ParkScene {
     }
 
     private func setupSunLight() {
-        sunLight.light.color = .white
+        sunLight.light.color = .init(white: 1.0, alpha: 1.0)
         sunLight.shadow = DirectionalLightComponent.Shadow(
             maximumDistance: 8,
             depthBias: 1.0
@@ -108,7 +109,7 @@ final class ParkScene {
     }
 
     private func setupFillLight() {
-        fillLight.light.color = .white
+        fillLight.light.color = .init(white: 1.0, alpha: 1.0)
         fillLight.look(
             at: [0, 0, 0],
             from: [-3, 6, -2],

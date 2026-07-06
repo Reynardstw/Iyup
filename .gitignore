@@ -1,5 +1,5 @@
 # macOS
-.DS_Store
+**/.DS_Store
 
 # Xcode build output
 build/
@@ -16,7 +16,7 @@ xcuserdata/
 
 # Swift Package Manager
 .build/
-.swiftpm/configuration/
+.swiftpm/
 
 # Archive / binary output
 *.ipa
@@ -24,6 +24,10 @@ xcuserdata/
 *.dSYM.zip
 
 # Local signing / secrets
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
 *.mobileprovision
 .env
 .env.*
@@ -32,3 +36,6 @@ Config/Signing.local.xcconfig
 
 # CocoaPods
 Pods/
+
+# Project zip
+*.zip

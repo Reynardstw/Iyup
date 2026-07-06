@@ -23,6 +23,10 @@ struct ContentView: View {
             Tab("Shade Map", systemImage: "map") {
                 ShadeMapView()
             }
+
+            Tab("Lokasi", systemImage: "location.circle") {
+                LocationDistanceView()
+            }
         }
         .task {
             let debugRunID = "AUTO-" + String(UUID().uuidString.prefix(8))

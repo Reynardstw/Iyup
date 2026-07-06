@@ -9,8 +9,18 @@ final class ParkScene {
 
     private let sunLight = DirectionalLight()
     private let fillLight = DirectionalLight()
+    private let camera = PerspectiveCamera()
 
     private var targetWorld: SIMD3<Float> = .zero
+
+    private var cameraDistance: Float = 7.5
+    private var cameraAzimuth: Float = 0
+    private var cameraElevation: Float = 1.2
+
+    private let minDistance: Float = 3.0
+    private let maxDistance: Float = 16.0
+    private let minElevation: Float = 0.15
+    private let maxElevation: Float = 1.45
 
     private let sunPositionService = OfficialSunKitSunPositionService()
     private let sunVectorConverter = SunVectorConverter(
@@ -22,13 +32,14 @@ final class ParkScene {
 
         setupSunLight()
         setupFillLight()
+        setupCamera()
 
         guard let url = Self.resourceURL(
-            name: "checkpoint_final_4",
-            extensionName: "usda",
+            name: "park",
+            extensionName: "usdz",
             subdirectories: [nil, "Resources/Reality"]
         ) else {
-            print("checkpoint_final_4.usda tidak ditemukan di bundle")
+            print("park.usdz tidak ditemukan di bundle")
             return container
         }
 
@@ -37,7 +48,7 @@ final class ParkScene {
             worldRoot.addChild(park)
             normalizeParkScale(park)
         } catch {
-            print("Gagal load checkpoint_final_4.usda: \(error.localizedDescription)")
+            print("Gagal load : \(error.localizedDescription)")
         }
 
         return container
@@ -77,6 +88,18 @@ final class ParkScene {
         fillLight.light.intensity = 30 + 120 * altitudeFactor
     }
 
+    func rotateCamera(deltaAzimuth: Float, deltaElevation: Float) {
+        cameraAzimuth += deltaAzimuth
+        cameraElevation = max(minElevation, min(maxElevation, cameraElevation + deltaElevation))
+        updateCameraTransform()
+    }
+
+    func zoomCamera(scale: Float) {
+        guard scale > 0 else { return }
+        cameraDistance = max(minDistance, min(maxDistance, cameraDistance / scale))
+        updateCameraTransform()
+    }
+
     func sunPosition(
         hour: Int,
         location: ParkLocation
@@ -96,6 +119,28 @@ final class ParkScene {
                 azimuthDegrees: 0
             )
         }
+    }
+
+    private func setupCamera() {
+        updateCameraTransform()
+        container.addChild(camera)
+    }
+
+    private func updateCameraTransform() {
+        let horizontal = cameraDistance * cos(cameraElevation)
+        let height = cameraDistance * sin(cameraElevation)
+
+        let position = SIMD3<Float>(
+            targetWorld.x + horizontal * sin(cameraAzimuth),
+            targetWorld.y + height,
+            targetWorld.z + horizontal * cos(cameraAzimuth)
+        )
+
+        camera.look(
+            at: targetWorld,
+            from: position,
+            relativeTo: nil
+        )
     }
 
     private func setupSunLight() {
@@ -130,6 +175,7 @@ final class ParkScene {
         worldRoot.scale = [scale, scale, scale]
         worldRoot.position = -center * scale
         targetWorld = .zero
+        updateCameraTransform()
     }
 
     private static func resourceURL(

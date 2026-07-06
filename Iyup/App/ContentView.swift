@@ -31,6 +31,14 @@ struct ContentView: View {
             Tab("Cuaca", systemImage: "cloud.sun.rain") {
                 WeatherView()
             }
+
+            Tab("IoT", systemImage: "dot.radiowaves.left.and.right") {
+                IoTDashboardView()
+            }
+
+            Tab("Analytics", systemImage: "chart.xyaxis.line") {
+                AnalyticsView()
+            }
         }
         .task {
             let debugRunID = "AUTO-" + String(UUID().uuidString.prefix(8))

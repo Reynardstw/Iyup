@@ -27,6 +27,10 @@ struct ContentView: View {
             Tab("Lokasi", systemImage: "location.circle") {
                 LocationDistanceView()
             }
+
+            Tab("Cuaca", systemImage: "cloud.sun.rain") {
+                WeatherView()
+            }
         }
         .task {
             let debugRunID = "AUTO-" + String(UUID().uuidString.prefix(8))

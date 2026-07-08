@@ -13,17 +13,17 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
 
         var modelName: String {
             switch self {
-            case .shortLux: return "ModelShortLux"
-            case .shortTemp: return "ModelShortTemp"
-            case .shortOccupancy: return "ModelShortOccupancy"
-            case .longLux: return "ModelLongLux"
-            case .longTemp: return "ModelLongTemp"
-            case .longOccupancy: return "ModelLongOccupancy"
+            case .shortLux: return "IyupShortLuxV2"
+            case .shortTemp: return "IyupShortTempV2"
+            case .shortOccupancy: return "IyupShortOccupancyV2"
+            case .longLux: return "IyupLongLuxV2"
+            case .longTemp: return "IyupLongTempV2"
+            case .longOccupancy: return "IyupLongOccupancyV2"
             }
         }
 
         var manifestName: String {
-            "model_features_\(rawValue)_xgb"
+            "iyup_features_\(rawValue)_v2"
         }
 
         var outputName: String {
@@ -31,6 +31,15 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
             case .shortLux, .longLux: return "predicted_lux"
             case .shortTemp, .longTemp: return "predicted_temp"
             case .shortOccupancy, .longOccupancy: return "predicted_occupancy"
+            }
+        }
+
+        var isLongHorizonModel: Bool {
+            switch self {
+            case .longLux, .longTemp, .longOccupancy:
+                return true
+            case .shortLux, .shortTemp, .shortOccupancy:
+                return false
             }
         }
 
@@ -174,7 +183,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
 
             print("🕒 [MLShade][\(debugRunID)] Forecast sample: spot=\(shadowResult.spot.id), date=\(entry.sampleDate), regime=\(isShort ? "short" : "long"), horizonMinutes=\(horizonMinutes)")
 
-            let lux = try predict(
+            let luxRaw = try predict(
                 isShort ? .shortLux : .longLux,
                 spot: shadowResult.spot,
                 spotNumber: spotNumber,
@@ -184,7 +193,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
                 debugRunID: debugRunID
             )
 
-            let temperature = try predict(
+            let temperatureRaw = try predict(
                 isShort ? .shortTemp : .longTemp,
                 spot: shadowResult.spot,
                 spotNumber: spotNumber,
@@ -204,28 +213,57 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
                 debugRunID: debugRunID
             )
 
-            print("✅ [MLShade][\(debugRunID)] Forecast sample output: spot=\(shadowResult.spot.id), lux=\(lux), temp=\(temperature), occupancyRaw=\(occupancyRaw)")
+            let lux = sanitizeLux(luxRaw, entry: entry, debugRunID: debugRunID)
+            let temperature = sanitizeTemperature(temperatureRaw, entry: entry, debugRunID: debugRunID)
+            let occupancy = max(0.0, min(1.0, occupancyRaw))
+
+            print("✅ [MLShade][\(debugRunID)] Forecast sample output: spot=\(shadowResult.spot.id), luxRaw=\(luxRaw), lux=\(lux), tempRaw=\(temperatureRaw), temp=\(temperature), occupancyRaw=\(occupancyRaw), occupancy=\(occupancy)")
 
             return MLShadeEnvironmentForecastPoint(
                 sampleDate: entry.sampleDate,
                 lux: lux,
                 temperatureCelsius: temperature,
-                occupancy: max(0.0, min(1.0, occupancyRaw))
+                occupancy: occupancy
             )
         }
     }
 
     private func spotNumber(for spot: ParkSpot) -> Int? {
-        if let exact = spotMapping[spot.id] {
+        let modelSpotID = resolveModelSpotID(from: spot.id)
+
+        if let exact = spotMapping[modelSpotID] {
             return exact
         }
 
-        let normalizedSpotID = normalizeSpotID(spot.id)
+        let normalizedSpotID = normalizeSpotID(modelSpotID)
         return spotMapping.first { key, _ in
             normalizeSpotID(key) == normalizedSpotID
         }?.value
     }
+    private func resolveModelSpotID(from appSpotID: String) -> String {
+        let normalized = appSpotID
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: "-", with: "")
 
+        let alias: [String: String] = [
+            "bench1": "Spot_A",
+            "bench2": "Spot_B",
+            "bench3": "Spot_C",
+            "bench4": "Spot_D",
+            "bench5": "Spot_E",
+            "bench6": "Spot_F",
+            "spota": "Spot_A",
+            "spotb": "Spot_B",
+            "spotc": "Spot_C",
+            "spotd": "Spot_D",
+            "spote": "Spot_E",
+            "spotf": "Spot_F"
+        ]
+
+        return alias[normalized] ?? appSpotID
+    }
     private func predict(
         _ key: ModelKey,
         spot: ParkSpot,
@@ -245,6 +283,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         var features = sensorFeatureProvider(spot, key.rawValue, entry.sampleDate)
         mergeAutomaticFeatures(
             into: &features,
+            modelKey: key,
             spotNumber: spotNumber,
             entry: entry,
             currentEntry: currentEntry,
@@ -286,6 +325,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
 
     private func mergeAutomaticFeatures(
         into features: inout [String: Double],
+        modelKey: ModelKey,
         spotNumber: Int,
         entry: ShadowTimelineEntry,
         currentEntry: ShadowTimelineEntry,
@@ -307,9 +347,15 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         features["horizon"] = horizonMinutes
         features["lead_days"] = leadDays
 
-        features["shadow_status"] = currentEntry.isShaded ? 1.0 : 0.0
+        if modelKey.isLongHorizonModel {
+            features["shadow_status"] = entry.isShaded ? 1.0 : 0.0
+            features["sun_altitude"] = entry.sunPosition.altitudeDegrees
+        } else {
+            features["shadow_status"] = currentEntry.isShaded ? 1.0 : 0.0
+            features["sun_altitude"] = currentEntry.sunPosition.altitudeDegrees
+        }
+
         features["shadow_status_future"] = entry.isShaded ? 1.0 : 0.0
-        features["sun_altitude"] = currentEntry.sunPosition.altitudeDegrees
         features["sun_altitude_future"] = entry.sunPosition.altitudeDegrees
 
         features["is_holiday"] = features["is_holiday"] ?? 0.0
@@ -324,11 +370,10 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         currentEntry: ShadowTimelineEntry
     ) {
         let shadedNow = currentEntry.isShaded
-        let shadedFuture = entry.isShaded
 
-        let fallbackLux = shadedNow ? 900.0 : 18_000.0
-        let fallbackTemp = shadedNow ? 30.0 : 32.0
-        let fallbackOccupancy = shadedFuture ? 0.45 : 0.25
+        let fallbackLux = fallbackLuxValue(isShaded: shadedNow, sunAltitudeDegrees: currentEntry.sunPosition.altitudeDegrees)
+        let fallbackTemp = fallbackTemperatureValue(isShaded: shadedNow, sunAltitudeDegrees: currentEntry.sunPosition.altitudeDegrees)
+        let fallbackOccupancy = shadedNow ? 0.18 : 0.12
 
         let lux = features["lux"] ?? fallbackLux
         let temp = features["temp"] ?? fallbackTemp
@@ -353,6 +398,58 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         features["\(prefix)_lag_60m"] = features["\(prefix)_lag_60m"] ?? currentValue
         features["\(prefix)_rollmean_30m"] = features["\(prefix)_rollmean_30m"] ?? currentValue
         features["\(prefix)_trend"] = features["\(prefix)_trend"] ?? 0.0
+    }
+
+    private func fallbackLuxValue(isShaded: Bool, sunAltitudeDegrees: Double) -> Double {
+        let sunStrength = max(0.0, sin(sunAltitudeDegrees * .pi / 180.0))
+        let openLux = 105_000.0 * pow(sunStrength, 1.15) * 0.78
+        let shadedLux = max(600.0, openLux * 0.12 + 450.0)
+        return max(0.0, isShaded ? shadedLux : openLux)
+    }
+
+    private func fallbackTemperatureValue(isShaded: Bool, sunAltitudeDegrees: Double) -> Double {
+        let sunStrength = max(0.0, sin(sunAltitudeDegrees * .pi / 180.0))
+        let base = 29.0 + 2.5 * sunStrength
+        return isShaded ? max(25.0, base - 1.2) : min(36.0, base + 0.6)
+    }
+
+    private func sanitizeLux(
+        _ value: Double,
+        entry: ShadowTimelineEntry,
+        debugRunID: String
+    ) -> Double {
+        guard value.isFinite else {
+            let fallback = fallbackLuxValue(isShaded: entry.isShaded, sunAltitudeDegrees: entry.sunPosition.altitudeDegrees)
+            print("⚠️ [MLShade][\(debugRunID)] Non-finite lux output, using fallback: \(fallback)")
+            return fallback
+        }
+
+        if value < 0.0 {
+            print("⚠️ [MLShade][\(debugRunID)] Negative lux output from model: \(value). Clamping to 0.")
+            return 0.0
+        }
+
+        return min(value, 120_000.0)
+    }
+
+    private func sanitizeTemperature(
+        _ value: Double,
+        entry: ShadowTimelineEntry,
+        debugRunID: String
+    ) -> Double {
+        guard value.isFinite else {
+            let fallback = fallbackTemperatureValue(isShaded: entry.isShaded, sunAltitudeDegrees: entry.sunPosition.altitudeDegrees)
+            print("⚠️ [MLShade][\(debugRunID)] Non-finite temperature output, using fallback: \(fallback)")
+            return fallback
+        }
+
+        if value < 15.0 || value > 45.0 {
+            let fallback = fallbackTemperatureValue(isShaded: entry.isShaded, sunAltitudeDegrees: entry.sunPosition.altitudeDegrees)
+            print("⚠️ [MLShade][\(debugRunID)] Unrealistic temperature output from model: \(value). Using fallback: \(fallback)")
+            return fallback
+        }
+
+        return value
     }
 
     private static func defaultSensorFeatureProvider(

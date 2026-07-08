@@ -6,17 +6,23 @@ struct ShadowIntervalCalculator {
     private let shadowRaycastService: ShadowRaycastProviding
     private let sampler: DateIntervalSampler
     private let sunVectorConverter: SunVectorConverter
+    private let shadeCoverageThreshold: Double
+    private let benchSampleRadius: Float
 
     init(
         sunPositionService: SunPositionProviding,
         shadowRaycastService: ShadowRaycastProviding,
         sampler: DateIntervalSampler = DateIntervalSampler(),
-        sunVectorConverter: SunVectorConverter = SunVectorConverter()
+        sunVectorConverter: SunVectorConverter = SunVectorConverter(),
+        shadeCoverageThreshold: Double = 0.70,
+        benchSampleRadius: Float = 0.50
     ) {
         self.sunPositionService = sunPositionService
         self.shadowRaycastService = shadowRaycastService
         self.sampler = sampler
         self.sunVectorConverter = sunVectorConverter
+        self.shadeCoverageThreshold = shadeCoverageThreshold
+        self.benchSampleRadius = benchSampleRadius
     }
 
     func calculate(
@@ -52,12 +58,11 @@ struct ShadowIntervalCalculator {
                 let isShaded: Bool
 
                 if sunPosition.isAboveHorizon {
-                    isShaded = try shadowRaycastService.isPointShaded(
-                        point: spot.position,
+                    isShaded = try isSpotShadedByCoverage(
+                        spot: spot,
                         sunDirection: sunDirection
                     )
                 } else {
-                    
                     isShaded = true
                 }
 
@@ -74,5 +79,47 @@ struct ShadowIntervalCalculator {
         }
 
         return timelines
+    }
+
+    private func isSpotShadedByCoverage(
+        spot: ParkSpot,
+        sunDirection: SIMD3<Float>
+    ) throws -> Bool {
+        let samplePoints = benchSamplePoints(for: spot.position)
+        var shadedSampleCount = 0
+
+        for point in samplePoints {
+            if try shadowRaycastService.isPointShaded(
+                point: point,
+                sunDirection: sunDirection
+            ) {
+                shadedSampleCount += 1
+            }
+        }
+
+        let shadeCoverage = Double(shadedSampleCount) / Double(samplePoints.count)
+        return shadeCoverage >= shadeCoverageThreshold
+    }
+
+    private func benchSamplePoints(for center: SIMD3<Float>) -> [SIMD3<Float>] {
+        Self.benchSampleOffsets(radius: benchSampleRadius).map { offset in
+            center + offset
+        }
+    }
+
+    private static func benchSampleOffsets(radius: Float) -> [SIMD3<Float>] {
+        let diagonal = radius * 0.70710678
+
+        return [
+            SIMD3<Float>(0.0, 0.0, 0.0),
+            SIMD3<Float>(radius, 0.0, 0.0),
+            SIMD3<Float>(-radius, 0.0, 0.0),
+            SIMD3<Float>(0.0, 0.0, radius),
+            SIMD3<Float>(0.0, 0.0, -radius),
+            SIMD3<Float>(diagonal, 0.0, diagonal),
+            SIMD3<Float>(diagonal, 0.0, -diagonal),
+            SIMD3<Float>(-diagonal, 0.0, diagonal),
+            SIMD3<Float>(-diagonal, 0.0, -diagonal)
+        ]
     }
 }

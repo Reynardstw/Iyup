@@ -128,7 +128,6 @@ final class ParkScene {
     private let sunVectorConverter = SunVectorConverter(
         zAxisDirection: .northNegative
     )
-    
     private func setupCamera() {
         let cam = PerspectiveCamera()
         cam.camera.fieldOfViewInDegrees = 60
@@ -187,7 +186,6 @@ final class ParkScene {
         
         return container
     }
-    
     func setSun(
         hour: Int,
         location: ParkLocation
@@ -255,6 +253,7 @@ final class ParkScene {
 
     private func setupFillLight() {
         fillLight.light.color = .white
+
         fillLight.look(
             at: [0, 0, 0],
             from: [-3, 6, -2],
@@ -309,8 +308,6 @@ final class ParkScene {
 
         return calendar.date(from: components) ?? Date()
     }
-    
-    
 }
 
 extension Entity {

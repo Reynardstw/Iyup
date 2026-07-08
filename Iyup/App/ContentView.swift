@@ -23,6 +23,26 @@ struct ContentView: View {
             Tab("Shade Map", systemImage: "map") {
                 ShadeMapView()
             }
+
+            Tab("Lokasi", systemImage: "location.circle") {
+                LocationDistanceView()
+            }
+
+            Tab("Cuaca", systemImage: "cloud.sun.rain") {
+                WeatherView()
+            }
+
+            Tab("IoT", systemImage: "dot.radiowaves.left.and.right") {
+                IoTDashboardView()
+            }
+
+            Tab("Analytics", systemImage: "chart.xyaxis.line") {
+                AnalyticsView()
+            }
+
+            Tab("ML Debug", systemImage: "wrench.and.screwdriver") {
+                MLManualScenarioDebugView()
+            }
         }
         .task {
             let debugRunID = "AUTO-" + String(UUID().uuidString.prefix(8))

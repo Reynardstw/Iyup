@@ -14,6 +14,7 @@ struct MLShadeScoredSpotResult: Identifiable, Equatable, Sendable {
 
     let meanPredictedLux: Double
     let meanPredictedTemperature: Double
+    let meanPredictedOccupancy: Double
     let maxPredictedOccupancy: Double
 
     let environmentReasons: [String]
@@ -21,7 +22,7 @@ struct MLShadeScoredSpotResult: Identifiable, Equatable, Sendable {
     var spot: ParkSpot { shadowResult.spot }
 
     var occupancyLabel: String {
-        switch maxPredictedOccupancy {
+        switch meanPredictedOccupancy {
         case ..<0.31:
             return "Sepi"
         case ..<0.61:

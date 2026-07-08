@@ -1,3 +1,4 @@
+
 //  RealityView { content in
 //                let root = await scene.build()
 //                content.add(root)
@@ -67,7 +68,6 @@ struct ShadeMapView: View {
     @State private var lastMag: CGFloat = 1
     @State private var lastPan: CGSize = .zero
     
-    
     @State private var lastRotation: Double = 0
     
     @State private var isTwoFinger = false
@@ -80,6 +80,7 @@ struct ShadeMapView: View {
         longitude: 106.794547,
         timeZoneIdentifier: "Asia/Jakarta"
     )
+    
     
     var body: some View {
         ZStack {

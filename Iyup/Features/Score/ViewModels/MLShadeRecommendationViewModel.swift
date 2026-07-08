@@ -79,13 +79,13 @@ final class MLShadeRecommendationViewModel {
             print("🧮 [MLShade][\(debugRunID)] Calling ML scoring engine")
             scoredResults = try await scoringEngine.score(
                 shadowResults: deterministicResults,
-                referenceDate: Date(),
+                referenceDate: startDate,
                 debugRunID: debugRunID
             )
 
             print("✅ [MLShade][\(debugRunID)] ML scoring finished. Scored count: \(scoredResults.count)")
             for (index, result) in scoredResults.enumerated() {
-                print("🏆 [MLShade][\(debugRunID)] Rank \(index + 1): spot=\(result.spot.id), name=\(result.spot.name), finalScore=\(result.finalScore), temp=\(result.meanPredictedTemperature), lux=\(result.meanPredictedLux), occ=\(result.maxPredictedOccupancy)")
+                print("🏆 [MLShade][\(debugRunID)] Rank \(index + 1): spot=\(result.spot.id), name=\(result.spot.name), finalScore=\(result.finalScore), temp=\(result.meanPredictedTemperature), lux=\(result.meanPredictedLux), meanOcc=\(result.meanPredictedOccupancy), maxOcc=\(result.maxPredictedOccupancy)")
             }
         } catch {
             print("❌ [MLShade][\(debugRunID)] ViewModel.calculate() failed: \(error)")

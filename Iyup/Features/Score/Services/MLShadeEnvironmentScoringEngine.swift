@@ -57,7 +57,7 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
                 forecastPoints: forecastPoints
             )
 
-            print("✅ [MLShade][\(debugRunID)] Scored \(shadowResult.spot.id): finalScore=\(scored.finalScore), meanTemp=\(scored.meanPredictedTemperature), meanLux=\(scored.meanPredictedLux), maxOcc=\(scored.maxPredictedOccupancy)")
+            print("✅ [MLShade][\(debugRunID)] Scored \(shadowResult.spot.id): finalScore=\(scored.finalScore), meanTemp=\(scored.meanPredictedTemperature), meanLux=\(scored.meanPredictedLux), meanOcc=\(scored.meanPredictedOccupancy), maxOcc=\(scored.maxPredictedOccupancy)")
 
             scoredResults.append(scored)
         }
@@ -87,14 +87,13 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
         let count = Double(forecastPoints.count)
         let meanLux = forecastPoints.map(\.lux).reduce(0.0, +) / count
         let meanTemperature = forecastPoints.map(\.temperatureCelsius).reduce(0.0, +) / count
-
-        
+        let meanOccupancy = forecastPoints.map(\.occupancy).reduce(0.0, +) / count
         let maxOccupancy = forecastPoints.map(\.occupancy).max() ?? 0.0
 
         let stability = scoringService.shadeStability(timeline: shadowResult.timeline)
         let lightScore = scoringService.lightScore(lux: meanLux)
         let temperatureScore = scoringService.temperatureScore(celsius: meanTemperature)
-        let occupancyPenalty = scoringService.occupancyPenalty(occupancy: maxOccupancy)
+        let occupancyPenalty = scoringService.occupancyPenalty(occupancy: meanOccupancy)
 
         let finalScore = scoringService.finalForecastScore(
             shadowForecastScore: shadowResult.shadowForecastScore,
@@ -113,10 +112,12 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
             occupancyPenalty: occupancyPenalty,
             meanPredictedLux: meanLux,
             meanPredictedTemperature: meanTemperature,
+            meanPredictedOccupancy: meanOccupancy,
             maxPredictedOccupancy: maxOccupancy,
             environmentReasons: makeEnvironmentReasons(
                 meanLux: meanLux,
                 meanTemperature: meanTemperature,
+                meanOccupancy: meanOccupancy,
                 maxOccupancy: maxOccupancy
             )
         )
@@ -125,6 +126,7 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
     private func makeEnvironmentReasons(
         meanLux: Double,
         meanTemperature: Double,
+        meanOccupancy: Double,
         maxOccupancy: Double
     ) -> [String] {
         var reasons: [String] = []
@@ -137,8 +139,10 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
             reasons.append(String(format: "Prediksi suhu cenderung panas, rata-rata %.1f°C.", meanTemperature))
         }
 
-        if maxOccupancy > 0.60 {
-            reasons.append("Prediksi occupancy mencapai \(Int((maxOccupancy * 100).rounded()))% pada interval ini.")
+        if meanOccupancy > 0.60 {
+            reasons.append("Prediksi occupancy rata-rata sekitar \(Int((meanOccupancy * 100).rounded()))% pada interval ini.")
+        } else if maxOccupancy > 0.85 {
+            reasons.append("Ada satu interval yang diprediksi ramai, puncaknya sekitar \(Int((maxOccupancy * 100).rounded()))%.")
         }
 
         return reasons

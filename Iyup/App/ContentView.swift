@@ -39,6 +39,10 @@ struct ContentView: View {
             Tab("Analytics", systemImage: "chart.xyaxis.line") {
                 AnalyticsView()
             }
+
+            Tab("ML Debug", systemImage: "wrench.and.screwdriver") {
+                MLManualScenarioDebugView()
+            }
         }
         .task {
             let debugRunID = "AUTO-" + String(UUID().uuidString.prefix(8))

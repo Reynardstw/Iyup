@@ -6,28 +6,151 @@ import UIKit
 final class ParkScene {
     private let container = Entity()
     private let worldRoot = Entity()
+    private let cameraAnchor = Entity()
 
     private let sunLight = DirectionalLight()
     private let fillLight = DirectionalLight()
-    private let camera = PerspectiveCamera()
 
     private var targetWorld: SIMD3<Float> = .zero
+    
+    // ---------------------
+    private var pinTemplate: Entity?
 
-    private var cameraDistance: Float = 7.5
-    private var cameraAzimuth: Float = 0
-    private var cameraElevation: Float = 1.2
+    private func loadPinTemplate() async {
+        guard let url = Self.resourceURL(
+            name: "map_pin_location_pin",
+            extensionName: "usdz",
+            subdirectories: [nil, "Resources/RealityKit"]
+        ) else {
+            print("pin usdz ga ketemu")
+            return
+        }
+        do {
+            pinTemplate = try await Entity(contentsOf: url)
+        } catch {
+            print("gagal load pin:", error.localizedDescription)
+        }
+    }
+    
+    private var cameraController: CameraController!
+    
+    private var spotLookup: [String: ShadeSpot] = [:]
+    
+    private let shadeService = ShadeSpotService()
+    private var shadeMarkers: [Entity] = []
+    
+    func tilt(dy: Float) { cameraController.tilt(dy: dy) }
+    
+    func syncController(position: SIMD3<Float>, target: SIMD3<Float>) {
+        cameraController.sync(position: position, target: target)
+    }
 
-    private let minDistance: Float = 3.0
-    private let maxDistance: Float = 16.0
-    private let minElevation: Float = 0.15
-    private let maxElevation: Float = 1.45
+    func showShadeSpots(forHour hour: Int) {
+        // hapus lama
+        shadeMarkers.forEach { $0.removeFromParent() }
+        shadeMarkers.removeAll()
+
+        let spots = shadeService.spots(forHour: hour)
+        for spot in spots {
+            let marker = makeMarker(spot: spot)
+            marker.position = spot.position
+            worldRoot.addChild(marker)
+            shadeMarkers.append(marker)
+            spotLookup[marker.name] = spot
+        }
+        print("marker dibuat:", shadeMarkers.count)
+    }
+
+    private func makeMarker(spot: ShadeSpot) -> Entity {
+        let wrapper = Entity()
+
+        if let template = pinTemplate {
+            let pin = template.clone(recursive: true)
+            pin.scale = [0.075, 0.075, 0.075]
+            pin.position.y = -3
+
+            pin.forEachDescendant { entity in
+                guard var model = entity.components[ModelComponent.self] else { return }
+                model.materials = model.materials.map { mat -> RealityKit.Material in
+                    if let pbr = mat as? PhysicallyBasedMaterial {
+                        return UnlitMaterial(color: pbr.baseColor.tint)
+                    }
+                    if let simple = mat as? SimpleMaterial {
+                        return UnlitMaterial(color: simple.color.tint)
+                    }
+                    return mat
+                }
+                entity.components.set(model)
+            }
+
+            wrapper.addChild(pin)
+        }
+
+        let shape = ShapeResource.generateSphere(radius: 0.6)
+        wrapper.components.set(CollisionComponent(shapes: [shape]))
+        wrapper.components.set(InputTargetComponent())
+        wrapper.name = "shade_\(spot.id)"
+        return wrapper
+    }
+    
+    func spotForEntity(_ name: String) -> ShadeSpot? {
+        spotLookup[name]
+    }
+    
+    func worldPositionForEntity(_ name: String) -> SIMD3<Float>? {
+        guard let marker = shadeMarkers.first(where: { $0.name == name }) else { return nil }
+        return marker.position(relativeTo: nil)
+    }
+    
+    func rotate(dx: Float) { cameraController.rotate(dx: dx) }
+    func zoom(delta: Float) { cameraController.zoom(delta: delta) }
+    func pan(dx: Float, dy: Float) { cameraController.pan(dx: dx, dy: dy) }
+    func focusOn(_ p: SIMD3<Float>) { cameraController.focus(on: p) }
+    func resetCamera() { cameraController.reset() }
+    func focusPin(_ p: SIMD3<Float>) { cameraController.focusPin(on: p) }
+    
+    func hideShadeSpots() {
+        shadeMarkers.forEach { $0.removeFromParent() }
+        shadeMarkers.removeAll()
+    }
+    
+//    func resetCamera() {
+//        cameraController.azimuth = 0
+//        cameraController.elevation = 0.9
+//        cameraController.distance = 5.5
+//        cameraController.center = [0, 0, 0]
+//        cameraController.update()
+//    }
+    
+    // ----------------
 
     private let sunPositionService = OfficialSunKitSunPositionService()
     private let sunVectorConverter = SunVectorConverter(
         zAxisDirection: .northNegative
     )
+    private func setupCamera() {
+        let cam = PerspectiveCamera()
+        cam.camera.fieldOfViewInDegrees = 60
+        cameraAnchor.addChild(cam)
+        cameraAnchor.position = [3,6, 3.5]
+        cameraAnchor.look(at: [-0.5, -0.75, 0], from: cameraAnchor.position, relativeTo: nil)
+        container.addChild(cameraAnchor)
+        cameraController = CameraController(anchor: cameraAnchor)
+    }
+    
+    func moveCamera(to position: SIMD3<Float>, target: SIMD3<Float>, duration: TimeInterval = 0.8) {
+        let temp = Entity()
+        temp.position = position
+        temp.look(at: target, from: position, relativeTo: nil)
+        cameraAnchor.move(to: temp.transform, relativeTo: nil, duration: duration)
+    }
+    
+    private var didBuild = false
 
     func build() async -> Entity {
+        
+        if didBuild { return container }
+        didBuild = true
         container.addChild(worldRoot)
 
         setupSunLight()
@@ -37,9 +160,9 @@ final class ParkScene {
         guard let url = Self.resourceURL(
             name: "park",
             extensionName: "usdz",
-            subdirectories: [nil, "Resources/Reality"]
+            subdirectories: [nil, "Resources/RealityKit"]
         ) else {
-            print("park.usdz tidak ditemukan di bundle")
+            print("checkpoint_final_4.usda tidak ditemukan di bundle")
             return container
         }
 
@@ -47,13 +170,22 @@ final class ParkScene {
             let park = try await Entity(contentsOf: url)
             worldRoot.addChild(park)
             normalizeParkScale(park)
-        } catch {
-            print("Gagal load : \(error.localizedDescription)")
-        }
+            await loadPinTemplate()   // ← taruh di sini
 
+            let b = park.visualBounds(relativeTo: worldRoot)
+            print("center:", b.center)
+            print("extents:", b.extents)
+            print("min:", b.min)
+            print("max:", b.max)
+            
+        } catch {
+            print("Gagal load checkpoint_final_4.usda: \(error.localizedDescription)")
+        }
+        
+
+        
         return container
     }
-
     func setSun(
         hour: Int,
         location: ParkLocation
@@ -88,18 +220,6 @@ final class ParkScene {
         fillLight.light.intensity = 30 + 120 * altitudeFactor
     }
 
-    func rotateCamera(deltaAzimuth: Float, deltaElevation: Float) {
-        cameraAzimuth += deltaAzimuth
-        cameraElevation = max(minElevation, min(maxElevation, cameraElevation + deltaElevation))
-        updateCameraTransform()
-    }
-
-    func zoomCamera(scale: Float) {
-        guard scale > 0 else { return }
-        cameraDistance = max(minDistance, min(maxDistance, cameraDistance / scale))
-        updateCameraTransform()
-    }
-
     func sunPosition(
         hour: Int,
         location: ParkLocation
@@ -121,30 +241,8 @@ final class ParkScene {
         }
     }
 
-    private func setupCamera() {
-        updateCameraTransform()
-        container.addChild(camera)
-    }
-
-    private func updateCameraTransform() {
-        let horizontal = cameraDistance * cos(cameraElevation)
-        let height = cameraDistance * sin(cameraElevation)
-
-        let position = SIMD3<Float>(
-            targetWorld.x + horizontal * sin(cameraAzimuth),
-            targetWorld.y + height,
-            targetWorld.z + horizontal * cos(cameraAzimuth)
-        )
-
-        camera.look(
-            at: targetWorld,
-            from: position,
-            relativeTo: nil
-        )
-    }
-
     private func setupSunLight() {
-        sunLight.light.color = .init(white: 1.0, alpha: 1.0)
+        sunLight.light.color = .white
         sunLight.shadow = DirectionalLightComponent.Shadow(
             maximumDistance: 8,
             depthBias: 1.0
@@ -154,7 +252,8 @@ final class ParkScene {
     }
 
     private func setupFillLight() {
-        fillLight.light.color = .init(white: 1.0, alpha: 1.0)
+        fillLight.light.color = .white
+
         fillLight.look(
             at: [0, 0, 0],
             from: [-3, 6, -2],
@@ -175,7 +274,6 @@ final class ParkScene {
         worldRoot.scale = [scale, scale, scale]
         worldRoot.position = -center * scale
         targetWorld = .zero
-        updateCameraTransform()
     }
 
     private static func resourceURL(
@@ -209,5 +307,14 @@ final class ParkScene {
         components.second = 0
 
         return calendar.date(from: components) ?? Date()
+    }
+}
+
+extension Entity {
+    func forEachDescendant(_ body: (Entity) -> Void) {
+        body(self)
+        for child in children {
+            child.forEachDescendant(body)
+        }
     }
 }

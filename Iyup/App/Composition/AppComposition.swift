@@ -36,7 +36,7 @@ enum AppComposition {
         let startDate = jakartaCalendar.date(bySettingHour: 15, minute: 0, second: 0, of: now) ?? now
         let endDate = jakartaCalendar.date(bySettingHour: 17, minute: 0, second: 0, of: now)
             ?? now.addingTimeInterval(7_200)
-
+      
         let location = SunExposureProjectionExporter.tamanBenderaPusakaLocation
         let spots = SunExposureProjectionExporter.benchSpots
         let treeOccluders = SunExposureProjectionExporter.treeOccluders
@@ -57,6 +57,7 @@ enum AppComposition {
             sunVectorConverter: SunVectorConverter(zAxisDirection: .northPositive),
             shadeCoverageThreshold: 0.70,
             benchSampleRadius: 0.50
+            
         )
 
         let recommendationEngine = ShadeRecommendationEngine(calculator: calculator)

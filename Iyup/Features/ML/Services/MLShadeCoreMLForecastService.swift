@@ -223,6 +223,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
                 sampleDate: entry.sampleDate,
                 lux: lux,
                 temperatureCelsius: temperature,
+
                 occupancy: occupancy
             )
         }
@@ -240,6 +241,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
             normalizeSpotID(key) == normalizedSpotID
         }?.value
     }
+
     private func resolveModelSpotID(from appSpotID: String) -> String {
         let normalized = appSpotID
             .lowercased()
@@ -325,6 +327,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
 
     private func mergeAutomaticFeatures(
         into features: inout [String: Double],
+
         modelKey: ModelKey,
         spotNumber: Int,
         entry: ShadowTimelineEntry,
@@ -370,7 +373,6 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         currentEntry: ShadowTimelineEntry
     ) {
         let shadedNow = currentEntry.isShaded
-
         let fallbackLux = fallbackLuxValue(isShaded: shadedNow, sunAltitudeDegrees: currentEntry.sunPosition.altitudeDegrees)
         let fallbackTemp = fallbackTemperatureValue(isShaded: shadedNow, sunAltitudeDegrees: currentEntry.sunPosition.altitudeDegrees)
         let fallbackOccupancy = shadedNow ? 0.18 : 0.12

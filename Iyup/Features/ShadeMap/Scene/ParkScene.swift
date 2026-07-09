@@ -1,6 +1,7 @@
 import Foundation
 import RealityKit
 import UIKit
+import Combine
 
 @MainActor
 final class ParkScene {
@@ -12,6 +13,10 @@ final class ParkScene {
     private let fillLight = DirectionalLight()
 
     private var targetWorld: SIMD3<Float> = .zero
+    
+    private var glowingBalls: [ModelEntity] = []
+    private var glowSubscription: Cancellable?
+    private var glowStart = Date()
     
     // ---------------------
     private var pinTemplate: Entity?
@@ -45,51 +50,120 @@ final class ParkScene {
         cameraController.sync(position: position, target: target)
     }
 
-    func showShadeSpots(forHour hour: Int) {
+    func showShadeSpots() {
         // hapus lama
         shadeMarkers.forEach { $0.removeFromParent() }
         shadeMarkers.removeAll()
 
-        let spots = shadeService.spots(forHour: hour)
+//        let spots = shadeService.spots(forHour: hour)
+        let spots = shadeService.spots()
         for spot in spots {
             let marker = makeMarker(spot: spot)
             marker.position = spot.position
+            marker.position.y += -3.5
             worldRoot.addChild(marker)
             shadeMarkers.append(marker)
             spotLookup[marker.name] = spot
         }
         print("marker dibuat:", shadeMarkers.count)
     }
-
+    
+//    private func makeMarker(spot: ShadeSpot) -> Entity {
+//        let wrapper = Entity()
+//        let markerName = "shade_\(spot.id)" // Pindahkan nama ke variabel agar bisa dipakai bersama
+//        wrapper.name = markerName
+//
+//        if let template = pinTemplate {
+//            let pin = template.clone(recursive: true)
+//            pin.scale = [0.075, 0.075, 0.075]
+//            pin.position.y = -3
+//
+//            pin.forEachDescendant { entity in
+//                guard var model = entity.components[ModelComponent.self] else { return }
+//                model.materials = model.materials.map { mat -> RealityKit.Material in
+//                    if let pbr = mat as? PhysicallyBasedMaterial {
+//                        return UnlitMaterial(color: pbr.baseColor.tint)
+//                    }
+//                    if let simple = mat as? SimpleMaterial {
+//                        return UnlitMaterial(color: simple.color.tint)
+//                    }
+//                    return mat
+//                }
+//                entity.components.set(model)
+//            }
+//
+//            wrapper.addChild(pin)
+//        }
+//
+//        // --- PERBAIKAN DI SINI ---
+//        let collisionEntity = Entity()
+//        collisionEntity.name = markerName // ← SOLUSI: Berikan nama yang sama dengan wrapper
+//        
+//        let shape = ShapeResource.generateSphere(radius: 2.0)
+//        collisionEntity.components.set(CollisionComponent(shapes: [shape]))
+//        collisionEntity.components.set(InputTargetComponent())
+//        
+//        collisionEntity.position.y = -3
+//        
+//        wrapper.addChild(collisionEntity)
+//        // -------------------------
+//
+//        return wrapper
+//    }
+    
     private func makeMarker(spot: ShadeSpot) -> Entity {
         let wrapper = Entity()
+        let markerName = "shade_\(spot.id)"
+        wrapper.name = markerName // Nama wrapper tetap untuk manajemen internal
 
-        if let template = pinTemplate {
-            let pin = template.clone(recursive: true)
-            pin.scale = [0.075, 0.075, 0.075]
-            pin.position.y = -3
+        let purple = UIColor(red: 153/255, green: 69/255, blue: 236/255, alpha: 1)
 
-            pin.forEachDescendant { entity in
-                guard var model = entity.components[ModelComponent.self] else { return }
-                model.materials = model.materials.map { mat -> RealityKit.Material in
-                    if let pbr = mat as? PhysicallyBasedMaterial {
-                        return UnlitMaterial(color: pbr.baseColor.tint)
-                    }
-                    if let simple = mat as? SimpleMaterial {
-                        return UnlitMaterial(color: simple.color.tint)
-                    }
-                    return mat
-                }
-                entity.components.set(model)
-            }
+        // 1. Batang (silinder tipis)
+        let stemMesh = MeshResource.generateCylinder(height: 1.2, radius: 0.08)
+        var stemMat = PhysicallyBasedMaterial()
+        stemMat.baseColor = .init(tint: purple)
+        stemMat.roughness = 0.6
+        let stem = ModelEntity(mesh: stemMesh, materials: [stemMat])
+        stem.position.y = 0.6   // setengah tinggi, biar bawah nancap di y=0
+        wrapper.addChild(stem)
 
-            wrapper.addChild(pin)
+        // 2. Bola di atas batang
+        let ballMesh = MeshResource.generateSphere(radius: 0.35)
+        var ballMat = PhysicallyBasedMaterial()
+        ballMat.baseColor = .init(tint: purple)
+        ballMat.roughness = 0.4
+        ballMat.emissiveColor = .init(color: purple)
+        ballMat.emissiveIntensity = 0
+        let ball = ModelEntity(mesh: ballMesh, materials: [ballMat])
+        ball.position.y = 1.4   // di ujung atas batang
+        
+        let shadowComponent = DynamicLightShadowComponent(castsShadow: false)
+
+        // TERAPKAN KE ANAK-ANAKNYA LANGSUNG:
+        stem.components.set(shadowComponent)
+        ball.components.set(shadowComponent)
+        
+        // SOLUSI 1: Berikan nama markerName ke ball, karena ball yang memegang CollisionComponent!
+        ball.name = markerName
+        wrapper.addChild(ball)
+
+        // Skala keseluruhan pin
+        wrapper.scale = [3, 3, 3]
+
+        // SOLUSI 2: Kembalikan offset Y ke -3 (atau sesuaikan nilainya) agar sejajar permukaan tanah
+        wrapper.position.y = -3.5
+
+        // Collision buat tap (ditempel di ball)
+        let shape = ShapeResource.generateSphere(radius: 0.35 * 1.5)
+        ball.components.set(CollisionComponent(shapes: [shape]))
+        ball.components.set(InputTargetComponent())
+
+        // Kalau spot teduh, nyalakan pulse
+        if spot.level == .high {
+            glowingBalls.append(ball)
         }
+        
 
-        let shape = ShapeResource.generateSphere(radius: 0.6)
-        wrapper.components.set(CollisionComponent(shapes: [shape]))
-        wrapper.components.set(InputTargetComponent())
-        wrapper.name = "shade_\(spot.id)"
         return wrapper
     }
     
@@ -109,9 +183,52 @@ final class ParkScene {
     func resetCamera() { cameraController.reset() }
     func focusPin(_ p: SIMD3<Float>) { cameraController.focusPin(on: p) }
     
+    func startGlowLoop(scene: RealityKit.Scene) {
+        glowStart = Date()
+        glowSubscription = scene.subscribe(to: SceneEvents.Update.self) { [weak self] _ in
+            guard let self else { return }
+            let t = Date().timeIntervalSince(self.glowStart)
+            // gelombang sinus 0..1, periode ~1.3 detik
+            let wave = (sin(t * 2 * .pi / 1.3) + 1) / 2
+            let intensity = Float(0.2 + wave * 2.5)   // redup 0.2 → terang 2.5
+            let scale = Float(1.0 + wave * 0.4)          // ← TAMBAH: hitung skala
+
+            for ball in self.glowingBalls {
+                if var mat = ball.model?.materials.first as? PhysicallyBasedMaterial {
+                    mat.emissiveIntensity = intensity
+                    ball.model?.materials[0] = mat
+                }
+                ball.scale = [scale, scale, scale]        // ← TAMBAH: terapkan skala
+            }
+        }
+    }
+    
     func hideShadeSpots() {
         shadeMarkers.forEach { $0.removeFromParent() }
         shadeMarkers.removeAll()
+        glowingBalls.removeAll()   // tambah ini
+    }
+    
+    func updateGlow(safeSpotIDs: Set<String>) {
+        glowingBalls.removeAll()
+
+        for marker in shadeMarkers {
+            // PERBAIKAN: Cari ball di dalam anak (children) marker yang memiliki nama sama dengan marker-nya
+            guard let spot = spotLookup[marker.name],
+                  let ball = marker.children.first(where: { $0.name == marker.name }) as? ModelEntity else {
+                continue
+            }
+
+            if safeSpotIDs.contains(spot.spotID) {
+                glowingBalls.append(ball)
+            } else {
+                if var mat = ball.model?.materials.first as? PhysicallyBasedMaterial {
+                    mat.emissiveIntensity = 0
+                    ball.model?.materials[0] = mat
+                }
+                ball.scale = [1, 1, 1]
+            }
+        }
     }
     
 //    func resetCamera() {
@@ -187,7 +304,8 @@ final class ParkScene {
         return container
     }
     func setSun(
-        hour: Int,
+//        hour: Int,
+        hour: Double,
         location: ParkLocation
     ) {
         let sun = sunPosition(
@@ -221,7 +339,8 @@ final class ParkScene {
     }
 
     func sunPosition(
-        hour: Int,
+//        hour: Int,
+        hour: Double,
         location: ParkLocation
     ) -> SunPosition {
         let date = Self.jakartaDate(hour: hour)
@@ -293,17 +412,34 @@ final class ParkScene {
         return nil
     }
 
-    static func jakartaDate(hour: Int) -> Date {
+//    static func jakartaDate(hour: Int) -> Date {
+    static func jakartaDate(hour: Double) -> Date {
+//        var calendar = Calendar(identifier: .gregorian)
+//        calendar.timeZone = TimeZone(identifier: "Asia/Jakarta") ?? .current
+//
+//        var components = DateComponents()
+//        components.timeZone = TimeZone(identifier: "Asia/Jakarta")
+//        components.year = 2026
+//        components.month = 3
+//        components.day = 7
+//        components.hour = hour
+//        components.minute = 0
+//        components.second = 0
+        
+        
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Jakarta") ?? .current
+
+        let wholeHour = Int(hour)
+        let minute = Int(round((hour - Double(wholeHour)) * 60))
 
         var components = DateComponents()
         components.timeZone = TimeZone(identifier: "Asia/Jakarta")
         components.year = 2026
         components.month = 3
         components.day = 7
-        components.hour = hour
-        components.minute = 0
+        components.hour = wholeHour
+        components.minute = minute
         components.second = 0
 
         return calendar.date(from: components) ?? Date()

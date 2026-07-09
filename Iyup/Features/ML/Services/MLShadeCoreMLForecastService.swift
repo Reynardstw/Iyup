@@ -255,13 +255,11 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
             "bench3": "Spot_C",
             "bench4": "Spot_D",
             "bench5": "Spot_E",
-            "bench6": "Spot_F",
             "spota": "Spot_A",
             "spotb": "Spot_B",
             "spotc": "Spot_C",
             "spotd": "Spot_D",
             "spote": "Spot_E",
-            "spotf": "Spot_F"
         ]
 
         return alias[normalized] ?? appSpotID

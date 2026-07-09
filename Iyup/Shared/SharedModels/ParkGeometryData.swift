@@ -7,7 +7,6 @@ enum ParkGeometryData {
         ParkSpot(id: "Bench3", name: "Bench3", position: SIMD3<Float>(-0.1738, 0.0846, 1.0614)),
         ParkSpot(id: "Bench4", name: "Bench4", position: SIMD3<Float>(0.5904, 0.0720, -2.6854)),
         ParkSpot(id: "Bench5", name: "Bench5", position: SIMD3<Float>(-0.3416, 0.0627, -2.0499)),
-        ParkSpot(id: "Bench6", name: "Bench6", position: SIMD3<Float>(-0.5754, 0.0000, -1.2131))
     ]
 
     static let treeOccluders: [ShadowOccluderSphere] = [

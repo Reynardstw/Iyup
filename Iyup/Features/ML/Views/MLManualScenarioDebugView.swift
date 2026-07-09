@@ -480,7 +480,7 @@ private final class ManualMLScenarioRunner {
 
     private func makeScenarioPoints() -> [ScenarioPoint] {
         let times = ["07:00", "08:00", "10:00", "12:00", "14:00", "16:00", "17:00"]
-        let benches = ["Bench1", "Bench2", "Bench3", "Bench4", "Bench5", "Bench6"]
+        let benches = ["Bench1", "Bench2", "Bench3", "Bench4", "Bench5"]
         return times.flatMap { time in
             benches.map { bench in
                 scenarioPoint(time: time, bench: bench)
@@ -496,7 +496,6 @@ private final class ManualMLScenarioRunner {
         case "Bench3": spotInfo = ("Spot_C", 2)
         case "Bench4": spotInfo = ("Spot_D", 3)
         case "Bench5": spotInfo = ("Spot_E", 4)
-        case "Bench6": spotInfo = ("Spot_F", 5)
         default: spotInfo = (bench, 0)
         }
 
@@ -530,8 +529,7 @@ private final class ManualMLScenarioRunner {
         case ("06:45", "Bench2"): return 0.6667
         case ("06:45", "Bench4"): return 1.0
         case ("06:45", "Bench5"): return 0.2222
-        case ("06:45", "Bench6"): return 1.0
-        case ("07:00", "Bench2"), ("07:00", "Bench4"), ("07:00", "Bench6"):
+        case ("07:00", "Bench2"), ("07:00", "Bench4"):
             return 1.0
         case ("08:00", "Bench2"), ("08:00", "Bench4"):
             return 1.0

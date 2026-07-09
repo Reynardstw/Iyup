@@ -80,4 +80,71 @@ enum AppComposition {
         calendar.timeZone = TimeZone(identifier: "Asia/Jakarta") ?? .current
         return calendar
     }
+
+    static func makeParkDetailViewModel(place: NearbyPlace = .tamanBenderaPusaka) -> ParkDetailViewModel {
+        let location = SunExposureProjectionExporter.tamanBenderaPusakaLocation
+        let spots = SunExposureProjectionExporter.benchSpots
+        let treeOccluders = SunExposureProjectionExporter.treeOccluders
+
+        let raycastService = GeometryShadowRaycastService(
+            occluders: treeOccluders
+        )
+
+        let calculator = ShadowIntervalCalculator(
+            sunPositionService: OfficialSunKitSunPositionService(),
+            shadowRaycastService: raycastService,
+            sunVectorConverter: SunVectorConverter(zAxisDirection: .northPositive),
+            shadeCoverageThreshold: 0.70,
+            benchSampleRadius: 0.50
+        )
+
+        let forecastService: any MLShadeEnvironmentForecastProviding
+        do {
+            forecastService = try MLShadeCoreMLForecastService(calendar: jakartaCalendar)
+            print("✅ [Iyup] ParkDetail USING CORE ML FORECAST SERVICE")
+        } catch {
+            print("⚠️ [Iyup] ParkDetail CORE ML FAILED, USING MOCK FORECAST SERVICE: \(error)")
+            forecastService = MLShadeMockEnvironmentForecastService()
+        }
+
+        let locationViewModel = LocationDistanceViewModel(
+            locationService: CoreLocationUserLocationService(),
+            destination: place
+        )
+
+        return ParkDetailViewModel(
+            place: place,
+            parkLocation: location,
+            spots: spots,
+            calculator: calculator,
+            forecastService: forecastService,
+            locationViewModel: locationViewModel,
+            weatherService: WeatherKitWeatherService()
+        )
+    }
+
+
+    static func makePlanTripViewModel() -> PlanTripViewModel {
+        let location = SunExposureProjectionExporter.tamanBenderaPusakaLocation
+        let spots = SunExposureProjectionExporter.benchSpots
+        let treeOccluders = SunExposureProjectionExporter.treeOccluders
+
+        let raycastService = GeometryShadowRaycastService(
+            occluders: treeOccluders
+        )
+
+        let calculator = ShadowIntervalCalculator(
+            sunPositionService: OfficialSunKitSunPositionService(),
+            shadowRaycastService: raycastService,
+            sunVectorConverter: SunVectorConverter(zAxisDirection: .northPositive),
+            shadeCoverageThreshold: 0.70,
+            benchSampleRadius: 0.50
+        )
+
+        return PlanTripViewModel(
+            parkLocation: location,
+            spots: spots,
+            calculator: calculator
+        )
+    }
 }

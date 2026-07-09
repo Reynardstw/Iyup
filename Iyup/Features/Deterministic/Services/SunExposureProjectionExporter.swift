@@ -271,7 +271,6 @@ extension SunExposureProjectionExporter {
         ParkSpot(id: "Bench3", name: "Bench3", position: SIMD3<Float>(-0.9488, -5.7704, 44.1478)),
         ParkSpot(id: "Bench4", name: "Bench4", position: SIMD3<Float>(13.2469, -6.0049, -25.4502)),
         ParkSpot(id: "Bench5", name: "Bench5", position: SIMD3<Float>(-4.0655, -6.1766, -13.6455)),
-        ParkSpot(id: "Bench6", name: "Bench6", position: SIMD3<Float>(-8.4091, -7.3415, 1.8986))
     ]
 
     static let treeOccluders: [ShadowOccluderSphere] = [

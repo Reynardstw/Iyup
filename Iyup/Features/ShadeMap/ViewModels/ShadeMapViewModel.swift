@@ -52,7 +52,7 @@ class ShadeMapViewModel {
     let planTripMapTopPadding: CGFloat = 204
     let planTripMapReservedHeight: CGFloat = 150
 
-    let weatherBadgeBottomPadding: CGFloat = 72
+    let weatherBadgeBottomPadding: CGFloat = 82
     let timeSliderBottomPadding: CGFloat = 52
 
     var floatingControlsOpacity: Double { 1 }

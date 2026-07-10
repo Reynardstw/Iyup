@@ -16,7 +16,9 @@ struct ShadeMapView: View {
     @State private var lastMag: CGFloat = 1
     @State private var lastPan: CGSize = .zero
     @State private var lastRotation: Double = 0
-
+    @State private var showCalendarInSheet = false
+    @State private var restoreSheetAfterCalendar = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -38,6 +40,10 @@ struct ShadeMapView: View {
             }
             .onChange(of: viewModel.showDetail) { _, newValue in
                 onDetailActiveChange(newValue)
+            }
+            .onChange(of: viewModel.showCalendar) { _, isShowing in
+                guard !isShowing else { return }
+                restoreNativeSheetAfterCalendarIfNeeded()
             }
             .sheet(isPresented: $viewModel.showSheet) {
                 ParkDetailSheetContent(
@@ -85,6 +91,42 @@ extension ShadeMapView {
         .frame(width: 1, height: 1)
         .opacity(0.001)
         .allowsHitTesting(false)
+    }
+
+    private func openNativeCalendarPopover() {
+        if viewModel.showCalendar {
+            viewModel.showCalendar = false
+            return
+        }
+
+        restoreSheetAfterCalendar = viewModel.showDetail
+            && viewModel.showSheet
+            && !viewModel.showPlanTrip
+
+        viewModel.showSheet = false
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(160))
+            guard viewModel.showDetail, !viewModel.showPlanTrip else {
+                restoreSheetAfterCalendar = false
+                return
+            }
+            viewModel.showCalendar = true
+        }
+    }
+
+    private func restoreNativeSheetAfterCalendarIfNeeded() {
+        guard restoreSheetAfterCalendar else { return }
+        guard viewModel.showDetail, !viewModel.showPlanTrip else {
+            restoreSheetAfterCalendar = false
+            return
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(140))
+            viewModel.showSheet = true
+            restoreSheetAfterCalendar = false
+        }
     }
 
     private var backgroundLayer: some View {
@@ -175,6 +217,7 @@ extension ShadeMapView {
                 .padding(.leading, 29)
                 .padding(.bottom, viewModel.weatherBadgeBottomPadding)
                 .opacity(viewModel.floatingControlsOpacity)
+                .foregroundColor(.gray)
             }
         }
         .overlay {
@@ -263,8 +306,7 @@ extension ShadeMapView {
                     viewModel.closeDetail()
                     onTripSavedNavigateToTrips()
                 }
-            )
-            .transition(.move(edge: .trailing).combined(with: .opacity))
+            )           .transition(.move(edge: .trailing).combined(with: .opacity))
             .zIndex(10)
         }
     }
@@ -356,7 +398,7 @@ extension ShadeMapView {
             Spacer()
 
             Button {
-                viewModel.showCalendar = true
+                openNativeCalendarPopover()
             } label: {
                 Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
                     .font(.subheadline.weight(.semibold))

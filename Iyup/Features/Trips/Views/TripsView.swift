@@ -20,7 +20,7 @@ struct TripsView: View {
         }
     }
 
-    // MARK: Empty state (sesuai desain)
+    // MARK: Empty  state (sesuai desain)
 
     private var emptyState: some View {
         VStack(spacing: 10) {
@@ -74,40 +74,35 @@ private struct TripCard: View {
     let trip: Trip
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(trip.parkName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+        // Pindahkan NavigationLink untuk membungkus seluruh konten card
+        NavigationLink {
+            EditTripView(trip: trip)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(trip.parkName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
 
-                Text(trip.city.isEmpty ? trip.address : trip.city)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    Text(trip.city.isEmpty ? trip.address : trip.city)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                
+                // Hapus Image chevron manual di sini,
+                // karena List sudah otomatis memberikannya
+                Spacer(minLength: 8)
             }
-
-            Spacer(minLength: 8)
-
-            NavigationLink {
-                EditTripView(trip: trip)
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            // Pindahkan modifier padding dan background ke dalam label NavigationLink
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        // Hapus style bawaan NavigationLink agar teks tidak menjadi biru
+        .buttonStyle(.plain)
     }
-}
-
-#Preview {
-    TripsView()
 }

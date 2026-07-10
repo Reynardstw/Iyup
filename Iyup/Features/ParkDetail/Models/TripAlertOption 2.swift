@@ -1,6 +1,6 @@
 import Foundation
 
-enum TripAlertOption: String, CaseIterable, Identifiable {
+enum TripAlertOption: String, CaseIterable, Identifiable, Codable {
     case none = "None"
     case atTime = "At time of event"
     case fiveMinutesBefore = "5 minutes before"

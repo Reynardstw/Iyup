@@ -6,11 +6,8 @@ enum AppComposition {
     static func makeScoreViewModel() -> MLShadeRecommendationViewModel {
         do {
             let viewModel = try makeCoreMLScoreViewModel()
-            print("✅ [Iyup] USING CORE ML FORECAST SERVICE")
             return viewModel
         } catch {
-            print("⚠️ [Iyup] CORE ML FAILED, USING MOCK FORECAST SERVICE")
-            print("⚠️ [Iyup] Error: \(error)")
             return makeMockScoreViewModel()
         }
     }
@@ -45,11 +42,6 @@ enum AppComposition {
             occluders: treeOccluders
         )
 
-        print("🪑 [Iyup] Bench count: \(spots.count)")
-        for spot in spots {
-            print("🪑 [Iyup] \(spot.name): x=\(spot.position.x), y=\(spot.position.y), z=\(spot.position.z)")
-        }
-        print("🌳 [Iyup] Tree occluder count: \(treeOccluders.count)")
 
         let calculator = ShadowIntervalCalculator(
             sunPositionService: OfficialSunKitSunPositionService(),
@@ -101,9 +93,7 @@ enum AppComposition {
         let forecastService: any MLShadeEnvironmentForecastProviding
         do {
             forecastService = try MLShadeCoreMLForecastService(calendar: jakartaCalendar)
-            print("✅ [Iyup] ParkDetail USING CORE ML FORECAST SERVICE")
         } catch {
-            print("⚠️ [Iyup] ParkDetail CORE ML FAILED, USING MOCK FORECAST SERVICE: \(error)")
             forecastService = MLShadeMockEnvironmentForecastService()
         }
 
@@ -123,6 +113,22 @@ enum AppComposition {
         )
     }
 
+
+    /// Semua dependency Plan Trip dalam satu bundle, biar bisa di-preload sekaligus
+    /// (scene, deterministic VM, dan score VM untuk glow ML).
+    struct PlanTripBundle {
+        let scene: ParkScene
+        let planTripViewModel: PlanTripViewModel
+        let scoreViewModel: MLShadeRecommendationViewModel
+    }
+
+    static func makePlanTripBundle() -> PlanTripBundle {
+        PlanTripBundle(
+            scene: ParkScene(),
+            planTripViewModel: makePlanTripViewModel(),
+            scoreViewModel: makeScoreViewModel()
+        )
+    }
 
     static func makePlanTripViewModel() -> PlanTripViewModel {
         let location = SunExposureProjectionExporter.tamanBenderaPusakaLocation

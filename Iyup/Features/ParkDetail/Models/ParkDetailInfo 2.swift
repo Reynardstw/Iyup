@@ -12,6 +12,7 @@ struct ParkDetailInfo: Identifiable, Sendable {
     let distanceKm: Int
     let temperatureCelsius: Int
     let humidityPercent: Int
+    let weatherSymbolName: String
     let outfitHeadline: String
     let outfitEmojis: [String]
     let crowdLabel: String
@@ -40,6 +41,7 @@ extension ParkDetailInfo {
         distanceKm: 31,
         temperatureCelsius: 32,
         humidityPercent: 67,
+        weatherSymbolName: "cloud.sun.fill",
         outfitHeadline: "Perfect weather for a loose t-shirt and airy sundress.",
         outfitEmojis: ["🕶️", "👒", "👟", "🩴"],
         crowdLabel: "Busy",

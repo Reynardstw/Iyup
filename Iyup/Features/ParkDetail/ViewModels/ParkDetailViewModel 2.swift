@@ -168,9 +168,11 @@ final class ParkDetailViewModel {
     }
 
     private func rebuildInfo() {
-        let temperature = hourlyWeather.first { $0.hour == selectedHour }?.temperatureCelsius ?? 31
-        let humidity = hourlyWeather.first { $0.hour == selectedHour }?.humidity ?? 0.65
-        let condition = hourlyWeather.first { $0.hour == selectedHour }?.condition ?? "Cerah"
+        let selectedWeather = hourlyWeather.first { $0.hour == selectedHour }
+        let temperature = selectedWeather?.temperatureCelsius ?? 31
+        let humidity = selectedWeather?.humidity ?? 0.65
+        let condition = selectedWeather?.condition ?? "Cerah"
+        let symbolName = selectedWeather?.symbolName ?? "sun.max.fill"
 
         let previewOccupancy = hourlyOccupancy[selectedHour] ?? 0.3
 
@@ -194,6 +196,7 @@ final class ParkDetailViewModel {
             distanceKm: distanceKm,
             temperatureCelsius: Int(temperature.rounded()),
             humidityPercent: Int((humidity * 100).rounded()),
+            weatherSymbolName: symbolName,
             outfitHeadline: outfit.headline,
             outfitEmojis: outfit.emojis,
             crowdLabel: crowdLabel(for: previewOccupancy),
@@ -272,6 +275,7 @@ final class ParkDetailViewModel {
             distanceKm: 0,
             temperatureCelsius: 31,
             humidityPercent: 65,
+            weatherSymbolName: "sun.max.fill",
             outfitHeadline: "Menghitung rekomendasi outfit...",
             outfitEmojis: ["🕶️", "👒", "👟", "🩴"],
             crowdLabel: "Moderate",

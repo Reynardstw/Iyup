@@ -17,6 +17,7 @@ final class ParkScene {
     private var glowingBalls: [ModelEntity] = []
     private var glowSubscription: Cancellable?
     private var glowStart = Date()
+    private weak var realityScene: RealityKit.Scene?
     
     // ---------------------
     private var pinTemplate: Entity?
@@ -50,10 +51,8 @@ final class ParkScene {
         cameraController.sync(position: position, target: target)
     }
 
-    func showShadeSpots() {
-        // hapus lama
-        shadeMarkers.forEach { $0.removeFromParent() }
-        shadeMarkers.removeAll()
+    func prepareShadeSpotsIfNeeded() {
+        guard shadeMarkers.isEmpty else { return }
 
 //        let spots = shadeService.spots(forHour: hour)
         let spots = shadeService.spots()
@@ -61,11 +60,17 @@ final class ParkScene {
             let marker = makeMarker(spot: spot)
             marker.position = spot.position
             marker.position.y += -3.5
+            marker.isEnabled = false
             worldRoot.addChild(marker)
             shadeMarkers.append(marker)
             spotLookup[marker.name] = spot
         }
-        print("marker dibuat:", shadeMarkers.count)
+        print("marker prepared:", shadeMarkers.count)
+    }
+
+    func showShadeSpots() {
+        prepareShadeSpotsIfNeeded()
+        shadeMarkers.forEach { $0.isEnabled = true }
     }
     
 //    private func makeMarker(spot: ShadeSpot) -> Entity {
@@ -158,12 +163,6 @@ final class ParkScene {
         ball.components.set(CollisionComponent(shapes: [shape]))
         ball.components.set(InputTargetComponent())
 
-        // Kalau spot teduh, nyalakan pulse
-        if spot.level == .high {
-            glowingBalls.append(ball)
-        }
-        
-
         return wrapper
     }
     
@@ -184,7 +183,9 @@ final class ParkScene {
     func focusPin(_ p: SIMD3<Float>) { cameraController.focusPin(on: p) }
     
     func startGlowLoop(scene: RealityKit.Scene) {
+        realityScene = scene
         glowStart = Date()
+        glowSubscription?.cancel()
         glowSubscription = scene.subscribe(to: SceneEvents.Update.self) { [weak self] _ in
             guard let self else { return }
             let t = Date().timeIntervalSince(self.glowStart)
@@ -204,9 +205,21 @@ final class ParkScene {
     }
     
     func hideShadeSpots() {
-        shadeMarkers.forEach { $0.removeFromParent() }
-        shadeMarkers.removeAll()
-        glowingBalls.removeAll()   // tambah ini
+        shadeMarkers.forEach { $0.isEnabled = false }
+        glowingBalls.removeAll()
+    }
+
+    /// Pause loop glow (hemat CPU/GPU saat scene ini ketutup, mis. Plan Trip di atas ShadeMap).
+    func pauseGlowLoop() {
+        glowSubscription?.cancel()
+        glowSubscription = nil
+    }
+
+    /// Resume loop glow pakai scene yang tersimpan.
+    func resumeGlowLoop() {
+        if let scene = realityScene {
+            startGlowLoop(scene: scene)
+        }
     }
     
     func updateGlow(safeSpotIDs: Set<String>) {
@@ -264,6 +277,9 @@ final class ParkScene {
     
     private var didBuild = false
 
+    /// Cache asset park.usdz (shared antar semua ParkScene). Decode disk sekali saja.
+    private static var cachedPark: Entity?
+
     func build() async -> Entity {
         
         if didBuild { return container }
@@ -284,17 +300,20 @@ final class ParkScene {
         }
 
         do {
-            let park = try await Entity(contentsOf: url)
+            // Asset cache: decode park.usdz dari disk HANYA sekali seumur app.
+            // Instance berikutnya cukup clone (murah) → hilangkan reload pas transisi.
+            let park: Entity
+            if let cached = Self.cachedPark {
+                park = cached.clone(recursive: true)
+            } else {
+                let loaded = try await Entity(contentsOf: url)
+                Self.cachedPark = loaded
+                park = loaded.clone(recursive: true)
+            }
             worldRoot.addChild(park)
             normalizeParkScale(park)
             await loadPinTemplate()   // ← taruh di sini
 
-            let b = park.visualBounds(relativeTo: worldRoot)
-            print("center:", b.center)
-            print("extents:", b.extents)
-            print("min:", b.min)
-            print("max:", b.max)
-            
         } catch {
             print("Gagal load checkpoint_final_4.usda: \(error.localizedDescription)")
         }

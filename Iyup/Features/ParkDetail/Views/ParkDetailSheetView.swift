@@ -11,6 +11,9 @@ struct ParkDetailSheetView: View {
     @State private var showPlanTrip = false
     @State private var isReady = false
 
+    // Dependency Plan Trip di-preload di sini (scene 3D, deterministic VM, score VM).
+    @State private var planBundle = AppComposition.makePlanTripBundle()
+
     init(viewModel: ParkDetailViewModel) {
         _viewModel = State(initialValue: viewModel)
     }
@@ -25,7 +28,10 @@ struct ParkDetailSheetView: View {
                 .navigationDestination(isPresented: $showPlanTrip) {
                     PlanTripView(
                         parkName: viewModel.info.name,
-                        recommendedShadeWindow: viewModel.info.recommendedShadeWindow
+                        recommendedShadeWindow: viewModel.info.recommendedShadeWindow,
+                        scene: planBundle.scene,
+                        viewModel: planBundle.planTripViewModel,
+                        scoreViewModel: planBundle.scoreViewModel
                     )
                 }
         }
@@ -35,7 +41,7 @@ struct ParkDetailSheetView: View {
         ZStack(alignment: .topLeading) {
             mapPlaceholder
             backButton
-            debugHourSlider
+            timeSlider
         }
         .sheet(isPresented: $isReady) {
             ParkDetailSheetContent(
@@ -45,8 +51,10 @@ struct ParkDetailSheetView: View {
                 info: viewModel.info,
                 onPlanTrip: {
                     isReady = false
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    // Scene sudah di-preload, jadi tak perlu nunggu load lagi.
+                    // Jeda kecil hanya biar sheet mulai turun sebelum push.
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(80))
                         showPlanTrip = true
                     }
                 },
@@ -63,12 +71,15 @@ struct ParkDetailSheetView: View {
             try? await Task.sleep(for: .milliseconds(50))
             isReady = true
             await viewModel.load()
+            // Preload 3D Plan Trip di background (asset cache warm dari ShadeMap).
+            // Saat user tap "Plan Trip", build() tinggal kena guard → instan.
+            _ = await planBundle.scene.build()
         }
     }
 
-    private var debugHourSlider: some View {
+    private var timeSlider: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Debug jam: \(viewModel.selectedHour).00")
+            Text("Jam: \(viewModel.selectedHour).00")
                 .font(.caption.bold())
 
             Slider(

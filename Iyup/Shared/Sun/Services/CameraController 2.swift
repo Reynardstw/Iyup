@@ -47,7 +47,6 @@ final class CameraController {
         center.x = clampF(center.x, panBoundsX.lowerBound, panBoundsX.upperBound)
         center.z = clampF(center.z, panBoundsZ.lowerBound, panBoundsZ.upperBound)
         update()
-        print("center:", center)     // ← taruh di sini
     }
 
     func focus(on point: SIMD3<Float>) {

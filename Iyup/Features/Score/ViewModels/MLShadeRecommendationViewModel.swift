@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 
-
 @MainActor
 @Observable
 final class MLShadeRecommendationViewModel {
@@ -42,19 +41,14 @@ final class MLShadeRecommendationViewModel {
     }
 
     func calculate(debugRunID: String) async {
-        print("🧭 [MLShade][\(debugRunID)] ViewModel.calculate() started")
-        print("🧭 [MLShade][\(debugRunID)] Location: lat=\(location.latitude), lon=\(location.longitude), tz=\(location.timeZoneIdentifier)")
-        print("🧭 [MLShade][\(debugRunID)] Spots count: \(spots.count)")
-        print("🧭 [MLShade][\(debugRunID)] Start: \(startDate)")
-        print("🧭 [MLShade][\(debugRunID)] End: \(endDate)")
-        print("🧭 [MLShade][\(debugRunID)] Step minutes: \(stepMinutes)")
+        let totalStart = CFAbsoluteTimeGetCurrent()
 
         isCalculating = true
         errorMessage = nil
 
         defer {
             isCalculating = false
-            print("🧭 [MLShade][\(debugRunID)] ViewModel.calculate() ended")
+            print("⏱[MLShade][\(debugRunID)] calculate total \(ms(totalStart))")
         }
 
         do {
@@ -66,33 +60,28 @@ final class MLShadeRecommendationViewModel {
                 spots: spots
             )
 
-            print("🌳 [MLShade][\(debugRunID)] Calling deterministic shadow recommendation engine")
+            let shadowStart = CFAbsoluteTimeGetCurrent()
             let deterministicResults = try recommendationEngine.recommend(request: request)
-            print("✅ [MLShade][\(debugRunID)] Shadow engine finished. Result count: \(deterministicResults.count)")
-
-            for result in deterministicResults {
-                print("🌳 [MLShade][\(debugRunID)] Shadow result: spot=\(result.spot.id), timeline=\(result.timeline.count), shadowScore=\(result.shadowForecastScore)")
-            }
+            print("⏱[MLShade][\(debugRunID)] deterministic \(ms(shadowStart))")
 
             shadowResults = deterministicResults
 
-            print("🧮 [MLShade][\(debugRunID)] Calling ML scoring engine")
+            let scoringStart = CFAbsoluteTimeGetCurrent()
             scoredResults = try await scoringEngine.score(
                 shadowResults: deterministicResults,
                 referenceDate: startDate,
                 debugRunID: debugRunID
             )
-
-            print("✅ [MLShade][\(debugRunID)] ML scoring finished. Scored count: \(scoredResults.count)")
-            for (index, result) in scoredResults.enumerated() {
-                print("🏆 [MLShade][\(debugRunID)] Rank \(index + 1): spot=\(result.spot.id), name=\(result.spot.name), finalScore=\(result.finalScore), temp=\(result.meanPredictedTemperature), lux=\(result.meanPredictedLux), meanOcc=\(result.meanPredictedOccupancy), maxOcc=\(result.maxPredictedOccupancy)")
-            }
+            print("⏱[MLShade][\(debugRunID)] scoring \(ms(scoringStart))")
         } catch {
-            print("❌ [MLShade][\(debugRunID)] ViewModel.calculate() failed: \(error)")
-
             shadowResults = []
             scoredResults = []
             errorMessage = error.localizedDescription
+            print("⏱[MLShade][\(debugRunID)] calculate failed after \(ms(totalStart))")
         }
+    }
+
+    private func ms(_ start: CFAbsoluteTime) -> String {
+        String(format: "%.1f ms", (CFAbsoluteTimeGetCurrent() - start) * 1000)
     }
 }

@@ -338,10 +338,10 @@ class ShadeMapViewModel {
                 target: [0, -1.2, 0],
                 duration: duration
             )
-            scene.syncController(
-                position: [-2.2, 2.5, 0.75],
-                target: [0, -1.2, 0]
-            )
+//            scene.syncController(
+//                position: [-2.2, 2.5, 0.75],
+//                target: [0, -1.2, 0]
+//            )
         }
     }
 

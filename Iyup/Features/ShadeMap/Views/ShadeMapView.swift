@@ -16,7 +16,6 @@ struct ShadeMapView: View {
     @State private var lastMag: CGFloat = 1
     @State private var lastPan: CGSize = .zero
     @State private var lastRotation: Double = 0
-    @State private var showCalendarInSheet = false
     @State private var restoreSheetAfterCalendar = false
     
     var body: some View {
@@ -123,7 +122,7 @@ extension ShadeMapView {
         }
 
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(140))
+            try? await Task.sleep(for: .milliseconds(0))
             viewModel.showSheet = true
             restoreSheetAfterCalendar = false
         }
@@ -157,10 +156,12 @@ extension ShadeMapView {
 
     private var lockPlaceholderLayer: some View {
         ZStack {
-            Image(systemName: "map")
-                .font(.system(size: 150))
-                .padding(40)
-                .opacity(0.1)
+            Image("tebet_silhouette_smooth")   // ganti sesuai nama asset kamu
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: 220)
+                                    .rotationEffect(.degrees(30))   // putar sesuai selera
+                                    .opacity(0.8)
 
             Image(systemName: "lock")
                 .font(.system(size: 100, weight: .light))
@@ -217,7 +218,6 @@ extension ShadeMapView {
                 .padding(.leading, 29)
                 .padding(.bottom, viewModel.weatherBadgeBottomPadding)
                 .opacity(viewModel.floatingControlsOpacity)
-                .foregroundColor(.gray)
             }
         }
         .overlay {
@@ -330,11 +330,14 @@ extension ShadeMapView {
                     }
                 )
 
-            ShadeCard()
-                .position(location)
-                .offset(x: 80, y: -40)
-                .transition(.scale(scale: 0.8).combined(with: .opacity))
-                .onTapGesture {}
+            if let selectedSpot = viewModel.selectedSpot,
+               let scored = viewModel.scoreViewModel.scoredResults.first(where: { $0.spot.id == selectedSpot.spotID }) {
+                ShadeCard(scored: scored)
+                    .position(location)
+                    .offset(x: 80, y: -40)
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    .onTapGesture {}
+            }
         }
     }
 

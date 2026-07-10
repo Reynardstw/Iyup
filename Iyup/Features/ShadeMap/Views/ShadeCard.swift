@@ -1,31 +1,29 @@
-//
-//  ShadeCard.swift
-//  Iyup
-//
-//  Created by Albert Tandy Harison on 08/07/26.
-//
-
 import SwiftUI
 
 struct ShadeCard: View {
+    let scored: MLShadeScoredSpotResult
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 4) {
                 Image(systemName: "thermometer.medium")
                     .font(.system(size: 12))
-                Text("32°")
+
+                Text(String(format: "%.1f°C", scored.meanPredictedTemperature))
             }
 
             HStack(spacing: 4) {
                 Image(systemName: "sun.max")
                     .font(.system(size: 12))
-                Text("Bright")
+
+                Text(scored.shadowResult.safetyStatus.rawValue)
             }
 
             HStack(spacing: 4) {
                 Image(systemName: "person.2.fill")
                     .font(.system(size: 12))
-                Text("Slightly crowded")
+
+                Text(scored.occupancyLabel)
             }
         }
         .font(.system(size: 12, weight: .semibold))

@@ -116,45 +116,20 @@ struct PlanTripView: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                close()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular, in: Circle())
-            }
-
-            Spacer()
-
-            Text("Plan Your Trip")
-                .font(.headline)
-                .lineLimit(1)
-                .font(.system(size: 20))
-
-            Spacer()
-
-            Button("Save") {
+        TripHeaderBar(
+            title: "Plan Your Trip",
+            trailingTitle: "Save",
+            trailingProminent: true,
+            onBack: { close() },
+            onTrailing: {
                 let trip = saveTrip()
-
                 if let onSaveTrip {
                     onSaveTrip(trip)
                 } else {
                     close()
                 }
             }
-            .font(.headline)
-            .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .frame(height: 44)
-            .background(accent)
-            .clipShape(Capsule())
-            .glassEffect(.regular, in: Capsule())
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 56)
+        )
     }
 
     private func close() {

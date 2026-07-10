@@ -392,7 +392,7 @@ extension ShadeMapView {
                 viewModel.closeDetail()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.black)
                     .padding(12)
                     .glassEffect(in: .circle)
@@ -404,6 +404,7 @@ extension ShadeMapView {
                 openNativeCalendarPopover()
             } label: {
                 Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size:18))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.black)
                     .padding(.horizontal, 20)
@@ -467,6 +468,7 @@ extension ShadeMapView {
             .padding(.vertical, 8)
             .glassEffect(.regular, in: Capsule())
             .shadow(color: Color.black.opacity(0.10), radius: 8, x: 0, y: 4)
+            .foregroundColor(.gray)
         }
     }
 }

@@ -68,35 +68,15 @@ struct EditTripView: View {
     }
 
     private var header: some View {
-        HStack {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .frame(width: 45, height: 48)
-                    .glassEffect(in: .circle)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text("Trip Details")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(maxWidth: .infinity)
-
-            Button {
+        TripHeaderBar(
+            title: "Trip Details",
+            trailingTitle: "Edit",
+            trailingProminent: false,
+            onBack: { dismiss() },
+            onTrailing: {
                 // TODO: connect editable mode later.
-            } label: {
-                Text("Edit")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .frame(width: 72, height: 48)
-                    .glassEffect(in: .capsule)
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        )
     }
 
     private var mapPreview: some View {
@@ -106,7 +86,7 @@ struct EditTripView: View {
                 coordinate: tripCoordinate
             )
         }
-        .frame(height: 148)
+        .frame(height: 158)
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 

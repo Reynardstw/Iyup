@@ -334,7 +334,7 @@ class ShadeMapViewModel {
 
         case .planTrip:
             scene.moveCamera(
-                to: [-2.2, 2.5, 0.75],
+                to: [-1.45, 1.55, 0.45],
                 target: [0, -1.2, 0],
                 duration: duration
             )

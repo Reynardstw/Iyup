@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TripsView: View {
     @State private var store = TripStore.shared
+    @State private var selectedTrip: Trip?
 
     private let pageBackground = Color(red: 0.92, green: 0.94, blue: 1.00)
 
@@ -17,10 +18,11 @@ struct TripsView: View {
                 }
             }
             .navigationTitle("Trips")
+            .navigationDestination(item: $selectedTrip) { trip in
+                EditTripView(trip: trip)
+            }
         }
     }
-
-    // MARK: Empty  state (sesuai desain)
 
     private var emptyState: some View {
         VStack(spacing: 10) {
@@ -46,15 +48,22 @@ struct TripsView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: List
-
     private var tripList: some View {
         List {
             ForEach(store.trips) { trip in
-                TripCard(trip: trip)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    .listRowBackground(Color.clear)
+                TripCard(trip: trip) {
+                    selectedTrip = trip
+                }
+                .listRowSeparator(.hidden)
+                .listRowInsets(
+                    EdgeInsets(
+                        top: 6,
+                        leading: 16,
+                        bottom: 6,
+                        trailing: 16
+                    )
+                )
+                .listRowBackground(Color.clear)
             }
             .onDelete(perform: deleteTrips)
         }
@@ -68,15 +77,22 @@ struct TripsView: View {
     }
 }
 
-// MARK: - Trip card
+// MARK: - Trip Card
 
 private struct TripCard: View {
     let trip: Trip
+    let onTap: () -> Void
+
+    private static let tripDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "id_ID")
+        formatter.dateFormat = "HH.mm dd/MM/yyyy"
+        return formatter
+    }()
 
     var body: some View {
-        // Pindahkan NavigationLink untuk membungkus seluruh konten card
-        NavigationLink {
-            EditTripView(trip: trip)
+        Button {
+            onTap()
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -85,24 +101,24 @@ private struct TripCard: View {
                         .foregroundStyle(.primary)
                         .lineLimit(1)
 
-                    Text(trip.city.isEmpty ? trip.address : trip.city)
+                    Text(Self.tripDateFormatter.string(from: trip.date))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                
-                // Hapus Image chevron manual di sini,
-                // karena List sudah otomatis memberikannya
+
                 Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.secondary.opacity(0.55))
             }
-            // Pindahkan modifier padding dan background ke dalam label NavigationLink
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        // Hapus style bawaan NavigationLink agar teks tidak menjadi biru
         .buttonStyle(.plain)
     }
 }

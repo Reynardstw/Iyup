@@ -1,6 +1,5 @@
 import Foundation
 
-
 struct MLShadeScoringService: Sendable {
     struct Weights: Sendable {
         let shadowForecast: Double
@@ -23,18 +22,18 @@ struct MLShadeScoringService: Sendable {
     }
 
     func lightScore(lux: Double) -> Double {
-        interpolate(lux, xs: [0, 1_500, 3_000, 6_000], ys: [1.0, 1.0, 0.5, 0.0])
+        interpolate(lux, xs: [0, 1_500, 3_000, 6_000], ys: [1.0, 1.0, 0.5, 0.2])
     }
 
     func temperatureScore(celsius: Double) -> Double {
-        interpolate(celsius, xs: [29, 31, 33], ys: [1.0, 0.75, 0.0])
+        interpolate(celsius, xs: [29, 31, 33], ys: [1.0, 0.75, 0.2])
     }
 
     func occupancyPenalty(occupancy: Double) -> Double {
         interpolate(
             occupancy,
             xs: [0.30, 0.60, 0.85, 1.0],
-            ys: [1.0, 0.75, 0.40, 0.0]
+            ys: [1.0, 0.8, 0.60, 0.3]
         )
     }
 

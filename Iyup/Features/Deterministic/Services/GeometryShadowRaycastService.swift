@@ -7,7 +7,6 @@ struct ShadowOccluderSphere: Identifiable, Equatable, Sendable {
     let radius: Float
 }
 
-
 struct GeometryShadowRaycastService: ShadowRaycastProviding {
     let occluders: [ShadowOccluderSphere]
 

@@ -1,14 +1,51 @@
 # ShadeMap Feature
 
 ## Tujuan
-Menampilkan taman 3D dari file `checkpoint_final_4.usda`, mengatur cahaya matahari berdasarkan SunKit, dan menyediakan fondasi untuk visualisasi bayangan di RealityKit.
+ShadeMap menampilkan taman 3D, mengatur cahaya matahari berdasarkan waktu, menampilkan shade spot, dan membuka flow detail atau Plan Trip.
 
-## File utama
-- `Views/ShadeMapView.swift` menampilkan tab visualisasi 3D, slider jam, dan overlay informasi altitude/azimuth.
-- `Scene/ParkScene.swift` membangun scene RealityKit, load USDA map, normalisasi skala map, dan mengarahkan `DirectionalLight` berdasarkan posisi matahari.
+## Struktur
+```text
+Features/ShadeMap/
+├─ Models/
+│  └─ ParkModel.swift
+├─ Services/
+│  └─ RealityKit/
+│     └─ ParkScene.swift
+├─ ViewModels/
+│  └─ ShadeMapViewModel.swift
+└─ Views/
+   ├─ ShadeMapView.swift
+   └─ Components/
+      ├─ ShadeCard.swift
+      ├─ TimeSliderPanel.swift
+      └─ TwoFingerPan.swift
+```
+
+## Asset RealityKit
+Scene utama memuat:
+- `Resources/RealityKit/park.usdz`
+- `Resources/RealityKit/map_pin_location_pin.usdz`
+
+Nama asset di dokumentasi lama yang masih menyebut `checkpoint_final_4.usda` sudah tidak dipakai sebagai sumber utama.
 
 ## Alur data
-`ShadeMapView` membaca nilai jam dari slider, memanggil `ParkScene.setSun(hour:location:)`, lalu `ParkScene` menghitung `SunPosition` melalui `OfficialSunKitSunPositionService` dan mengubahnya menjadi vektor cahaya melalui `SunVectorConverter`.
+`ShadeMapView` membaca state dari `ShadeMapViewModel`. Saat jam atau tanggal berubah, ViewModel menyinkronkan tanggal, kalkulasi shade, scoring, dan kamera.
 
-## Catatan implementasi
-Pohon buatan dari versi demo sudah dihapus. Objek pohon atau obstacle sekarang diharapkan berasal dari file map final.
+`ParkScene` menangani detail RealityKit:
+- build scene 3D;
+- set posisi matahari;
+- mengatur kamera;
+- menampilkan dan menyembunyikan shade spots;
+- update glow spot yang aman/teduh;
+- menjalankan glow loop saat scene aktif.
+
+## Gesture
+Gesture cepat seperti rotasi/pan tetap berada dekat dengan View karena update visual perlu responsif. `TwoFingerPan` menjadi bridge UIKit untuk two-finger pan agar gesture tidak memblokir tap di RealityView.
+
+## Mode tampilan
+ShadeMap memiliki beberapa mode:
+- mode default carousel taman;
+- mode detail saat user membuka View Details;
+- mode Plan Trip ketika halaman Plan Trip muncul di atas peta.
+
+Saat masuk View Details, parent diberi sinyal agar tab bar bisa disembunyikan. Saat Plan Trip dibuka dari ShadeMap, map 3D tetap berasal dari ShadeMapView dan PlanTripView hanya menyediakan slot transparan.

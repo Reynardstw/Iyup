@@ -1,7 +1,6 @@
 import Foundation
 import CoreML
 
-
 final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @unchecked Sendable {
     private enum ModelKey: String, CaseIterable, Sendable {
         case shortLux = "short_lux"
@@ -110,7 +109,6 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         calendar: Calendar = .current,
         sensorFeatureProvider: @escaping SensorFeatureProvider = MLShadeCoreMLForecastService.defaultSensorFeatureProvider
     ) throws {
-        print("🔎 [MLShade] Core ML forecast service init started")
 
         self.bundle = bundle
         self.calendar = calendar
@@ -118,23 +116,18 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
 
         var manifests: [ModelKey: ModelManifest] = [:]
         for key in ModelKey.allCases {
-            print("📄 [MLShade] Loading manifest: \(key.manifestName).json")
             manifests[key] = try Self.loadManifest(for: key, bundle: bundle)
             let featureCount = manifests[key]?.features_ordered.count ?? 0
-            print("✅ [MLShade] Loaded manifest: \(key.manifestName).json, features=\(featureCount)")
         }
 
         guard let firstMapping = manifests.values.first?.spot_mapping else {
-            print("❌ [MLShade] No spot_mapping found in XGBoost manifests")
             throw MLShadeForecastError.manifestNotFound
         }
         self.spotMapping = firstMapping
-        print("✅ [MLShade] Spot mapping loaded: \(firstMapping)")
 
         var models: [ModelKey: LoadedModel] = [:]
         for key in ModelKey.allCases {
             let manifest = manifests[key]
-            print("🧠 [MLShade] Loading Core ML model: \(key.modelName)")
             let model = try Self.loadModel(named: key.modelName, bundle: bundle)
             let features = manifest?.features_ordered.isEmpty == false
                 ? manifest!.features_ordered
@@ -146,12 +139,10 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
                 features: features,
                 outputName: key.outputName
             )
-            print("✅ [MLShade] Loaded model: \(key.modelName), output=\(key.outputName), featureCount=\(features.count)")
         }
         self.loadedModels = models
 
         let loadedNames = models.keys.map { $0.modelName }.sorted().joined(separator: ", ")
-        print("✅ [MLShade] Core ML forecast service ready. Loaded models: \(loadedNames)")
     }
 
     func forecast(
@@ -159,29 +150,20 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         referenceDate: Date,
         debugRunID: String
     ) async throws -> [MLShadeEnvironmentForecastPoint] {
-        print("🧠 [MLShade][\(debugRunID)] Core ML forecast called")
-        print("🧠 [MLShade][\(debugRunID)] Spot: \(shadowResult.spot.id) - \(shadowResult.spot.name)")
-        print("🧠 [MLShade][\(debugRunID)] Timeline count: \(shadowResult.timeline.count)")
 
         guard !shadowResult.timeline.isEmpty else {
-            print("❌ [MLShade][\(debugRunID)] Empty timeline for spot: \(shadowResult.spot.name)")
             throw MLShadeForecastError.emptyTimeline(shadowResult.spot.name)
         }
 
         guard let spotNumber = spotNumber(for: shadowResult.spot) else {
-            print("❌ [MLShade][\(debugRunID)] Spot mapping not found for: \(shadowResult.spot.id)")
             throw MLShadeForecastError.spotMappingNotFound(shadowResult.spot.id)
         }
-
-        print("✅ [MLShade][\(debugRunID)] spot_num for \(shadowResult.spot.id): \(spotNumber)")
 
         let currentEntry = shadowResult.timeline[0]
 
         return try shadowResult.timeline.map { entry in
             let horizonMinutes = max(entry.sampleDate.timeIntervalSince(referenceDate) / 60.0, 0.0)
             let isShort = horizonMinutes <= 240.0
-
-            print("🕒 [MLShade][\(debugRunID)] Forecast sample: spot=\(shadowResult.spot.id), date=\(entry.sampleDate), regime=\(isShort ? "short" : "long"), horizonMinutes=\(horizonMinutes)")
 
             let luxRaw = try predict(
                 isShort ? .shortLux : .longLux,
@@ -216,8 +198,6 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
             let lux = sanitizeLux(luxRaw, entry: entry, debugRunID: debugRunID)
             let temperature = sanitizeTemperature(temperatureRaw, entry: entry, debugRunID: debugRunID)
             let occupancy = max(0.0, min(1.0, occupancyRaw))
-
-            print("✅ [MLShade][\(debugRunID)] Forecast sample output: spot=\(shadowResult.spot.id), luxRaw=\(luxRaw), lux=\(lux), tempRaw=\(temperatureRaw), temp=\(temperature), occupancyRaw=\(occupancyRaw), occupancy=\(occupancy)")
 
             return MLShadeEnvironmentForecastPoint(
                 sampleDate: entry.sampleDate,
@@ -255,13 +235,11 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
             "bench3": "Spot_C",
             "bench4": "Spot_D",
             "bench5": "Spot_E",
-            "bench6": "Spot_F",
             "spota": "Spot_A",
             "spotb": "Spot_B",
             "spotc": "Spot_C",
             "spotd": "Spot_D",
             "spote": "Spot_E",
-            "spotf": "Spot_F"
         ]
 
         return alias[normalized] ?? appSpotID
@@ -276,11 +254,8 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         debugRunID: String
     ) throws -> Double {
         guard let loaded = loadedModels[key] else {
-            print("❌ [MLShade][\(debugRunID)] Model unavailable: \(key.modelName)")
             throw MLShadeForecastError.modelUnavailable(key.modelName)
         }
-
-        print("🧠 [MLShade][\(debugRunID)] Predicting with Core ML model: \(key.modelName)")
 
         var features = sensorFeatureProvider(spot, key.rawValue, entry.sampleDate)
         mergeAutomaticFeatures(
@@ -298,17 +273,13 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
 
         for featureName in loaded.features {
             guard let value = features[featureName], value.isFinite else {
-                print("❌ [MLShade][\(debugRunID)] Missing/invalid feature for \(key.modelName): \(featureName)")
-                print("📦 [MLShade][\(debugRunID)] Available feature keys: \(features.keys.sorted())")
                 throw MLShadeForecastError.missingFeature(featureName, model: key.rawValue)
             }
             dictionary[featureName] = MLFeatureValue(double: value)
         }
 
-        print("📦 [MLShade][\(debugRunID)] \(key.modelName) input feature count: \(dictionary.count)")
         for featureName in loaded.features {
             if let featureValue = dictionary[featureName] {
-                print("📦 [MLShade][\(debugRunID)] \(key.modelName).input[\(featureName)] = \(featureValue.doubleValue)")
             }
         }
 
@@ -316,12 +287,10 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         let output = try loaded.model.prediction(from: provider)
 
         if let value = output.featureValue(for: loaded.outputName) {
-            print("✅ [MLShade][\(debugRunID)] \(key.modelName).\(loaded.outputName) = \(value.doubleValue)")
             return value.doubleValue
         }
 
         let available = Array(output.featureNames).sorted()
-        print("❌ [MLShade][\(debugRunID)] Output not found for \(key.modelName). Expected: \(loaded.outputName), available: \(available)")
         throw MLShadeForecastError.invalidOutput(loaded.outputName, model: key.rawValue, available: available)
     }
 
@@ -337,12 +306,10 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         let components = calendar.dateComponents([.hour, .minute, .weekday], from: entry.sampleDate)
         let hour = Double(components.hour ?? 0) + Double(components.minute ?? 0) / 60.0
 
-        
         let dayOfWeek = Double(((components.weekday ?? 1) + 5) % 7)
         let horizonMinutes = max(entry.sampleDate.timeIntervalSince(referenceDate) / 60.0, 0.0)
         let leadDays = max(1.0, min(7.0, ceil(entry.sampleDate.timeIntervalSince(referenceDate) / 86_400.0)))
 
-        
         features["spot_num"] = Double(spotNumber)
         features["hour"] = hour
         features["day_of_week"] = dayOfWeek
@@ -422,12 +389,10 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
     ) -> Double {
         guard value.isFinite else {
             let fallback = fallbackLuxValue(isShaded: entry.isShaded, sunAltitudeDegrees: entry.sunPosition.altitudeDegrees)
-            print("⚠️ [MLShade][\(debugRunID)] Non-finite lux output, using fallback: \(fallback)")
             return fallback
         }
 
         if value < 0.0 {
-            print("⚠️ [MLShade][\(debugRunID)] Negative lux output from model: \(value). Clamping to 0.")
             return 0.0
         }
 
@@ -441,13 +406,11 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
     ) -> Double {
         guard value.isFinite else {
             let fallback = fallbackTemperatureValue(isShaded: entry.isShaded, sunAltitudeDegrees: entry.sunPosition.altitudeDegrees)
-            print("⚠️ [MLShade][\(debugRunID)] Non-finite temperature output, using fallback: \(fallback)")
             return fallback
         }
 
         if value < 15.0 || value > 45.0 {
             let fallback = fallbackTemperatureValue(isShaded: entry.isShaded, sunAltitudeDegrees: entry.sunPosition.altitudeDegrees)
-            print("⚠️ [MLShade][\(debugRunID)] Unrealistic temperature output from model: \(value). Using fallback: \(fallback)")
             return fallback
         }
 

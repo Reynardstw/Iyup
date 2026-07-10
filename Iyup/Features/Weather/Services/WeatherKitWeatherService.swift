@@ -31,4 +31,45 @@ struct WeatherKitWeatherService: WeatherProviding {
             windCompassDirection: current.wind.compassDirection.description
         )
     }
+
+    func fetchHourlyForecast(
+        latitude: Double,
+        longitude: Double,
+        startHour: Int,
+        endHour: Int
+    ) async throws -> [HourlyWeatherPoint] {
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        let weather = try await service.weather(for: location, including: .hourly)
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Jakarta") ?? .current
+
+        let today = Date()
+        var results: [HourlyWeatherPoint] = []
+
+        for hour in stride(from: startHour, through: endHour, by: 1) {
+            guard let targetDate = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: today) else {
+                continue
+            }
+
+            let closest = weather.min { lhs, rhs in
+                abs(lhs.date.timeIntervalSince(targetDate)) < abs(rhs.date.timeIntervalSince(targetDate))
+            }
+
+            guard let closest else { continue }
+
+            results.append(
+                HourlyWeatherPoint(
+                    date: targetDate,
+                    hour: hour,
+                    temperatureCelsius: closest.temperature.converted(to: .celsius).value,
+                    humidity: closest.humidity,
+                    condition: closest.condition.description,
+                    symbolName: closest.symbolName
+                )
+            )
+        }
+
+        return results
+    }
 }

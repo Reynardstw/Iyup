@@ -1,6 +1,5 @@
 import Foundation
 
-
 struct MLShadeEnvironmentScoringEngine: Sendable {
     private let forecastService: any MLShadeEnvironmentForecastProviding
     private let scoringService: MLShadeScoringService
@@ -29,15 +28,10 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
         referenceDate: Date = Date(),
         debugRunID: String
     ) async throws -> [MLShadeScoredSpotResult] {
-        print("🧮 [MLShade][\(debugRunID)] ScoringEngine.score() started")
-        print("🧮 [MLShade][\(debugRunID)] Forecast service type: \(type(of: forecastService))")
-        print("🧮 [MLShade][\(debugRunID)] Shadow results count: \(shadowResults.count)")
 
         var scoredResults: [MLShadeScoredSpotResult] = []
 
         for shadowResult in shadowResults {
-            print("📍 [MLShade][\(debugRunID)] Scoring spot: \(shadowResult.spot.id) - \(shadowResult.spot.name)")
-            print("📍 [MLShade][\(debugRunID)] Timeline count for \(shadowResult.spot.id): \(shadowResult.timeline.count)")
 
             let forecastPoints = try await forecastService.forecast(
                 for: shadowResult,
@@ -45,10 +39,7 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
                 debugRunID: debugRunID
             )
 
-            print("🌤️ [MLShade][\(debugRunID)] Forecast points for \(shadowResult.spot.id): \(forecastPoints.count)")
-
             guard !forecastPoints.isEmpty else {
-                print("⚠️ [MLShade][\(debugRunID)] Skip \(shadowResult.spot.id) because forecastPoints is empty")
                 continue
             }
 
@@ -56,8 +47,6 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
                 shadowResult: shadowResult,
                 forecastPoints: forecastPoints
             )
-
-            print("✅ [MLShade][\(debugRunID)] Scored \(shadowResult.spot.id): finalScore=\(scored.finalScore), meanTemp=\(scored.meanPredictedTemperature), meanLux=\(scored.meanPredictedLux), meanOcc=\(scored.meanPredictedOccupancy), maxOcc=\(scored.maxPredictedOccupancy)")
 
             scoredResults.append(scored)
         }
@@ -73,9 +62,6 @@ struct MLShadeEnvironmentScoringEngine: Sendable {
 
             return lhs.shadowResult.longestDirectSunStreakMinutes < rhs.shadowResult.longestDirectSunStreakMinutes
         }
-
-        print("✅ [MLShade][\(debugRunID)] ScoringEngine.score() finished")
-        print("🏆 [MLShade][\(debugRunID)] Sorted scored results count: \(sortedResults.count)")
 
         return sortedResults
     }

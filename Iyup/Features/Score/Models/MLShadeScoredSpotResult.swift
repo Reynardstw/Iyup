@@ -1,6 +1,5 @@
 import Foundation
 
-
 struct MLShadeScoredSpotResult: Identifiable, Equatable, Sendable {
     let id = UUID()
 

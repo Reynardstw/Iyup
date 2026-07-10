@@ -1,6 +1,5 @@
 import Foundation
 
-
 protocol MLShadeEnvironmentForecastProviding: Sendable {
     func forecast(
         for shadowResult: ShadowIntervalResult,

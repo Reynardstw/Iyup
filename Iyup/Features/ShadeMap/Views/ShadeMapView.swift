@@ -1,282 +1,401 @@
 import SwiftUI
 import RealityKit
+import UIKit
 
 struct ShadeMapView: View {
-    @State private var hour: Double = 10
-    @State private var scene = ParkScene()
-    @State private var showDetail = false
-    
-    // gestures
+    var onDetailActiveChange: (Bool) -> Void = { _ in }
+
+    var onTripSavedNavigateToTrips: () -> Void = {}
+
+    @State private var viewModel = ShadeMapViewModel()
+
     @State private var lastDrag: CGSize = .zero
     @State private var lastMag: CGFloat = 1
     @State private var lastPan: CGSize = .zero
     @State private var lastRotation: Double = 0
-    @State private var isTwoFinger = false
-    
-    // calender
-    @State private var selectedDate = Date()
-    @State private var showCalendar = false
-    
-    // pi
-    @State private var selectedSpot: ShadeSpot?
-    @State private var tapLocation: CGPoint? = nil
-    @State private var selectedPin: Entity? = nil
-    
-    // hubungin ke ML
-    @State private var viewModel = AppComposition.makeScoreViewModel()
-    
-    private let parkLocation = ParkLocation(
-        latitude: -6.245542,
-        longitude: 106.794547,
-        timeZoneIdentifier: "Asia/Jakarta"
-    )
-    
+    @State private var restoreSheetAfterCalendar = false
+
     var body: some View {
+        NavigationStack {
+            ZStack {
+                prewarmView
+                backgroundLayer
+                lockPlaceholderLayer
+                realityMapLayer
+                controlUILayer
+                planTripLayer
+            }
+            .onDisappear {
+                viewModel.selectedSpot = nil
+            }
+            .onChange(of: viewModel.hour) { _, newValue in
+                viewModel.syncHourChange(newValue)
+            }
+            .onChange(of: viewModel.selectedDate) { _, newValue in
+                viewModel.syncSelectedDateChange(newValue)
+            }
+            .onChange(of: viewModel.showDetail) { _, newValue in
+                onDetailActiveChange(newValue)
+            }
+            .onChange(of: viewModel.showCalendar) { _, isShowing in
+                guard !isShowing else { return }
+                restoreNativeSheetAfterCalendarIfNeeded()
+            }
+            .sheet(isPresented: $viewModel.showSheet) {
+                ParkDetailSheetContent(
+                    detent: viewModel.sheetDetent,
+                    peekDetent: viewModel.peekDetent,
+                    largeDetent: viewModel.largeDetent,
+                    info: viewModel.parkDetailViewModel.info,
+                    onPlanTrip: {
+                        viewModel.openPlanTripFromSheet()
+                    },
+                    onSelectDay: { index in
+                        Task { await viewModel.parkDetailViewModel.selectWeekday(index) }
+                    }
+                )
+                .presentationDetents(
+                    [viewModel.peekDetent, viewModel.midDetent, viewModel.largeDetent],
+                    selection: $viewModel.sheetDetent
+                )
+                .presentationBackgroundInteraction(.enabled(upThrough: viewModel.midDetent))
+                .presentationDragIndicator(.visible)
+                .interactiveDismissDisabled()
+            }
+            .task {
+                await viewModel.loadParkDetail()
+            }
+            .navigationDestination(item: $viewModel.selectedTripForEditing) { trip in
+                EditTripView(trip: trip)
+            }
+        }
+        .toolbar(viewModel.showDetail ? .hidden : .visible, for: .tabBar)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.showDetail)
+    }
+}
+
+extension ShadeMapView {
+    private var prewarmView: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(width: 1, height: 1).background(.thinMaterial)
+            Color.clear.frame(width: 1, height: 1).background(.ultraThinMaterial)
+            Color.clear.frame(width: 1, height: 1).background(.regularMaterial)
+            Text(" ").frame(width: 1, height: 1).glassEffect(in: .circle)
+        }
+        .frame(width: 1, height: 1)
+        .opacity(0.001)
+        .allowsHitTesting(false)
+    }
+
+    private func openNativeCalendarPopover() {
+        if viewModel.showCalendar {
+            viewModel.showCalendar = false
+            return
+        }
+
+        restoreSheetAfterCalendar = viewModel.showDetail
+            && viewModel.showSheet
+            && !viewModel.showPlanTrip
+
+        viewModel.showSheet = false
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(160))
+            guard viewModel.showDetail, !viewModel.showPlanTrip else {
+                restoreSheetAfterCalendar = false
+                return
+            }
+            viewModel.showCalendar = true
+        }
+    }
+
+    private func restoreNativeSheetAfterCalendarIfNeeded() {
+        guard restoreSheetAfterCalendar else { return }
+        guard viewModel.showDetail, !viewModel.showPlanTrip else {
+            restoreSheetAfterCalendar = false
+            return
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(0))
+            viewModel.showSheet = true
+            restoreSheetAfterCalendar = false
+        }
+    }
+
+    private var backgroundLayer: some View {
         ZStack {
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color(red: 234/255, green: 238/255, blue: 255/255),
-                    Color.white
+                    .white
                 ]),
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .ignoresSafeArea()
-            
-            RealityView { content in
-                let root = await scene.build()
-                content.add(root)
-                // Scene.setSun(hour: Int(hour.rounded()), location: parkLocation) -> ganti ke per 15 menit
-                scene.setSun(hour: hour, location: parkLocation)
-                if let realScene = root.scene {
-                    scene.startGlowLoop(scene: realScene)
-                }
-            } update: { _ in
-                // scene.setSun(hour: Int(hour.rounded()), location: parkLocation)
-                scene.setSun(hour: hour, location: parkLocation)
-            }
-            .ignoresSafeArea()
-            .overlay(alignment: .bottomLeading) {
-                if showDetail{
-                    WeatherBadge()
-                        .padding(.leading, 20)
-                        .padding(.bottom, 40)
-                }
-            }
-            .overlay {
-                if showDetail {
-                    TwoFingerPan(
-                        onPan: { t in
-                            withAnimation { selectedSpot = nil }
-                            let dy = Float(t.height - lastPan.height)
-                            scene.tilt(dy: dy)
-                            lastPan = t
-                        },
-                        onEnded: { lastPan = .zero }
-                    )
-                }
-            }
-            .overlay {
-                if selectedSpot != nil, let location = tapLocation {
-                    ZStack {
-                        Color.black.opacity(0.001)
-                            .ignoresSafeArea()
-                            .onTapGesture {
-                                withAnimation(.spring(duration: 0.3)) {
-                                    selectedSpot = nil
-                                }
-                            }
-                            .simultaneousGesture(
-                                DragGesture().onChanged { _ in
-                                    withAnimation { selectedSpot = nil }
-                                }
-                            )
-                        
-                        ShadeCard()
-                            .position(location)
-                            .offset(x: 80, y: -40)
-                            .transition(.scale(scale: 0.8).combined(with: .opacity))
-                            .onTapGesture {
-                                // biar tetap kebuka saat pencet popup nya
-                            }
-                    }
-                }
-            }
-            .gesture(showDetail ? tapGesture : nil)
-            .simultaneousGesture(showDetail ? panGesture : nil)
-            .simultaneousGesture(showDetail ? rotateGesture : nil)
-            .simultaneousGesture(showDetail ? zoomGesture : nil)
 
-            VStack(spacing: 0) {
-                if showDetail {
-                    detailTopBar
-                } else {
-                    mapHeader
-                }
-                
-                Spacer()
-                
-                if !showDetail {
-                    HStack {
-                        Image(systemName: "chevron.left")
-                            .foregroundColor(.black)
-                            .font(.system(size: 28, weight: .medium))
-                            .padding(.horizontal, 20)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(.black)
-                            .font(.system(size: 28, weight: .medium))
-                            .padding(.horizontal, 20)
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 253/255, green: 224/255, blue: 120/255).opacity(0.9),
+                    Color(red: 253/255, green: 224/255, blue: 120/255).opacity(0)
+                ]),
+                center: .topLeading,
+                startRadius: 0,
+                endRadius: 420
+            )
+            .opacity(viewModel.showDetail ? 0 : 1)
+            .animation(.easeInOut(duration: 0.3), value: viewModel.showDetail)
+        }
+        .ignoresSafeArea()
+    }
+
+    private var lockPlaceholderLayer: some View {
+        ZStack {
+            Image("tebet_silhouette_smooth")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: 220)
+                                    .rotationEffect(.degrees(30))
+                                    .opacity(0.8)
+
+            Image(systemName: "lock")
+                .font(.system(size: 100, weight: .light))
+                .foregroundColor(.gray)
+        }
+        .opacity(viewModel.currentPark.isMapped ? 0 : 1)
+        .allowsHitTesting(!viewModel.currentPark.isMapped)
+    }
+
+    private var realityMapLayer: some View {
+        RealityView { content in
+            let root = await viewModel.scene.build()
+
+            content.add(root)
+            viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
+
+            if let realScene = root.scene {
+                viewModel.scene.startGlowLoop(scene: realScene)
+            }
+
+            viewModel.shadeMapReady = true
+        } update: { _ in
+            viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
+        }
+        .frame(height: viewModel.mapDisplayMode.isPlanTripMini ? viewModel.planTripMapHeight : nil)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: viewModel.mapDisplayMode.isPlanTripMini ? 28 : 0,
+                style: .continuous
+            )
+        )
+        .padding(.horizontal, viewModel.mapDisplayMode.isPlanTripMini ? 20 : 0)
+        .padding(.top, viewModel.mapDisplayMode.isPlanTripMini ? viewModel.planTripMapTopPadding : 0)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .shadow(
+            color: Color.black.opacity(viewModel.mapDisplayMode.isPlanTripMini ? 0.18 : 0),
+            radius: viewModel.mapDisplayMode.isPlanTripMini ? 18 : 0,
+            x: 0,
+            y: viewModel.mapDisplayMode.isPlanTripMini ? 10 : 0
+        )
+        .ignoresSafeArea(edges: viewModel.mapDisplayMode.isPlanTripMini ? [] : .all)
+        .allowsHitTesting(viewModel.showDetail && !viewModel.showPlanTrip && viewModel.currentPark.isMapped)
+        .animation(.spring(response: 0.48, dampingFraction: 0.86), value: viewModel.mapDisplayMode)
+        .zIndex(viewModel.mapDisplayMode.isPlanTripMini ? 20 : 0)
+        .overlay(alignment: .bottomLeading) {
+            if viewModel.showDetail && !viewModel.showPlanTrip {
+                WeatherBadge(
+                    temperatureCelsius: viewModel.parkDetailViewModel.info.temperatureCelsius,
+                    symbolName: viewModel.parkDetailViewModel.info.weatherSymbolName
+                )
+                .padding(.leading, 29)
+                .padding(.bottom, viewModel.weatherBadgeBottomPadding)
+                .opacity(viewModel.floatingControlsOpacity)
+            }
+        }
+        .overlay {
+            if viewModel.showDetail && !viewModel.showPlanTrip {
+                TwoFingerPan(
+                    onPan: { translation in
+                        withAnimation { viewModel.selectedSpot = nil }
+                        let dy = Float(translation.height - lastPan.height)
+                        viewModel.scene.tilt(dy: dy)
+                        lastPan = translation
+                    },
+                    onEnded: { lastPan = .zero }
+                )
+            }
+        }
+        .overlay {
+            if !viewModel.showPlanTrip,
+               viewModel.selectedSpot != nil,
+               let location = viewModel.tapLocation {
+                cardPopupOverlay(at: location)
+            }
+        }
+        .gesture((viewModel.showDetail && !viewModel.showPlanTrip) ? tapGesture : nil)
+        .simultaneousGesture((viewModel.showDetail && !viewModel.showPlanTrip) ? panGesture : nil)
+        .simultaneousGesture((viewModel.showDetail && !viewModel.showPlanTrip) ? rotateGesture : nil)
+        .simultaneousGesture((viewModel.showDetail && !viewModel.showPlanTrip) ? zoomGesture : nil)
+        .opacity(viewModel.currentPark.isMapped ? 1 : 0)
+    }
+
+    private var controlUILayer: some View {
+        ZStack {
+            if !viewModel.showPlanTrip {
+                VStack(spacing: 0) {
+                    if viewModel.showDetail {
+                        detailTopBar
+                    } else {
+                        mapHeader
                     }
-                    .padding(.horizontal, 20)
-                }
-                
-                Spacer()
-                
-                if !showDetail {
-                    mapFooter
+
+                    Spacer()
+
+                    if !viewModel.showDetail {
+                        carouselChevrons
+                    }
+
+                    Spacer()
+
+                    if !viewModel.showDetail {
+                        mapFooter
+                    }
                 }
             }
-            
-            if showDetail {
+
+            if viewModel.showDetail && !viewModel.showPlanTrip {
                 HStack {
                     Spacer()
-                    TimeSliderPanel(hour: $hour)
+                    TimeSliderPanel(hour: $viewModel.hour)
                         .padding(.trailing, 16)
                 }
-            }
-            
-        }
-        .onDisappear {
-            selectedSpot = nil
-        }
-        .onChange(of: hour) { _, newValue in
-            Task { await recalcAndGlow(for: newValue, date: selectedDate) }
-        }
-        .onChange(of: selectedDate) { _, newValue in
-            if showDetail {
-                Task { await recalcAndGlow(for: hour, date: newValue) }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .padding(.bottom, viewModel.timeSliderBottomPadding)
+                .opacity(viewModel.floatingControlsOpacity)
+                .allowsHitTesting(true)
             }
         }
     }
-    
-    private var tapGesture: some Gesture {
-        SpatialTapGesture()
-            .targetedToAnyEntity()
-            .onEnded { value in
-                print("tap:", value.entity.name)
-                
-                if let spot = scene.spotForEntity(value.entity.name) {
+
+    @ViewBuilder
+    private var planTripLayer: some View {
+        if viewModel.showPlanTrip {
+            PlanTripView(
+                parkName: viewModel.parkDetailViewModel.info.name,
+                recommendedShadeWindow: viewModel.parkDetailViewModel.info.recommendedShadeWindow,
+                selectedDate: $viewModel.selectedDate,
+                viewModel: viewModel.planTripViewModel,
+                city: viewModel.parkDetailViewModel.info.city,
+                address: viewModel.parkDetailViewModel.info.address,
+                mapTopSpacing: viewModel.planTripMapReservedHeight,
+                onClose: {
+                    viewModel.closePlanTrip()
+                },
+                onSelectedDateChange: { newDate in
+                    viewModel.applyPlanTripDate(newDate)
+                },
+                onSaveTrip: { _ in
+                    viewModel.closeDetail()
+                    onTripSavedNavigateToTrips()
+                }
+            )           .transition(.move(edge: .trailing).combined(with: .opacity))
+            .zIndex(10)
+        }
+    }
+}
+
+extension ShadeMapView {
+    @ViewBuilder
+    private func cardPopupOverlay(at location: CGPoint) -> some View {
+        ZStack {
+            Color.black.opacity(0.001)
+                .ignoresSafeArea()
+                .onTapGesture {
                     withAnimation(.spring(duration: 0.3)) {
-                        selectedSpot = spot
-                        // Simpan koordinat 2D layar saat pin ditekan
-                        tapLocation = value.location
-                    }
-                } else {
-                    withAnimation(.spring(duration: 0.3)) {
-                        selectedSpot = nil
+                        viewModel.selectedSpot = nil
                     }
                 }
-            }
-    }
-    
-    // 1 jari = PAN
-    private var panGesture: some Gesture {
-        DragGesture(minimumDistance: 8)
-            .onChanged { value in
-                let dx = Float(value.translation.width - lastDrag.width)
-                let dy = Float(value.translation.height - lastDrag.height)
-                scene.pan(dx: dx, dy: dy)
-                lastDrag = value.translation
-            }
-            .onEnded { _ in lastDrag = .zero }
-    }
-    
-    // 2 jari rotate = putar
-    private var rotateGesture: some Gesture {
-        RotateGesture()
-            .onChanged { value in
-                let delta = Float(value.rotation.radians - lastRotation)
-                scene.rotate(dx: delta * 100)
-                lastRotation = value.rotation.radians
-            }
-            .onEnded { _ in lastRotation = 0 }
-    }
-    
-    // 2 jari pinch = zoom
-    private var zoomGesture: some Gesture {
-        MagnifyGesture()
-            .onChanged { value in
-                let delta = Float(value.magnification - lastMag) * 2
-                scene.zoom(delta: delta)
-                lastMag = value.magnification
-            }
-            .onEnded { _ in lastMag = 1 }
-    }
-    
-    private func tutupPopup() {
-        if selectedSpot != nil {
-            withAnimation(.spring(duration: 0.3)) {
-                selectedSpot = nil
+                .simultaneousGesture(
+                    DragGesture().onChanged { _ in
+                        withAnimation { viewModel.selectedSpot = nil }
+                    }
+                )
+
+            if let selectedSpot = viewModel.selectedSpot,
+               let scored = viewModel.scoreViewModel.scoredResults.first(where: { $0.spot.id == selectedSpot.spotID }) {
+                ShadeCard(scored: scored)
+                    .position(location)
+                    .offset(x: 80, y: -40)
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    .onTapGesture {}
             }
         }
     }
-    
-    struct WeatherBadge: View {
-        var body: some View {
-            HStack(spacing: 6) {
-                Image(systemName: "cloud.sun.fill")
-                    .font(.system(size: 16))
-                Text("32°")
-                    .font(.system(size: 16, weight: .semibold))
-            }
-            .foregroundColor(.gray)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Color.white)
-            .clipShape(Capsule())
-            .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 2)
+
+    private var carouselChevrons: some View {
+        HStack {
+            Image(systemName: "chevron.left")
+                .foregroundColor(.black)
+                .font(.system(size: 28, weight: .medium))
+                .padding(.horizontal, 20)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.snappy) { viewModel.previousPark() }
+                }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .foregroundColor(.black)
+                .font(.system(size: 28, weight: .medium))
+                .padding(.horizontal, 20)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.snappy) { viewModel.nextPark() }
+                }
         }
+        .padding(.horizontal, 20)
     }
-    
+
     private var mapHeader: some View {
         VStack(spacing: 0) {
-            Text("Taman Bendera Pusaka")
+            Text(viewModel.currentPark.name)
                 .font(.system(size: 32, weight: .bold))
-            Text("South Jakarta | FREE | Open 24 hour")
+
+            Text(viewModel.currentPark.description)
                 .font(.system(size: 16, weight: .medium))
                 .padding(.bottom, 4)
+
             HStack {
                 Image(systemName: "location.fill")
-                Text("31km from you • ETA 1h 2m")
+                Text(viewModel.currentPark.distanceInfo)
                     .font(.system(size: 14, weight: .medium))
             }
             .font(.footnote)
         }
         .padding(.top, 60)
     }
-    
+
     private var detailTopBar: some View {
         HStack {
             Button {
-                withAnimation { selectedSpot = nil }
-                scene.hideShadeSpots()
-                scene.moveCamera(to: [3, 6, 3.5], target: [-0.5, -0.75, 0], duration: 1.0)
-                showDetail = false
+                withAnimation { viewModel.selectedSpot = nil }
+                viewModel.closeDetail()
             } label: {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.black)
                     .padding(12)
                     .glassEffect(in: .circle)
             }
-            
+
             Spacer()
-            
+
             Button {
-                showCalendar = true
+                openNativeCalendarPopover()
             } label: {
-                Text(selectedDate.formatted(date: .abbreviated, time: .omitted))
+                Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size:18))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.black)
                     .padding(.horizontal, 20)
@@ -284,11 +403,11 @@ struct ShadeMapView: View {
                     .contentShape(Capsule())
                     .glassEffect(in: .capsule)
             }
-            .popover(isPresented: $showCalendar) {
+            .popover(isPresented: $viewModel.showCalendar) {
                 VStack {
                     DatePicker(
                         "Pilih Tanggal",
-                        selection: $selectedDate,
+                        selection: $viewModel.selectedDate,
                         displayedComponents: .date
                     )
                     .datePickerStyle(.graphical)
@@ -300,10 +419,9 @@ struct ShadeMapView: View {
                 .frame(width: 280, height: 250)
                 .presentationCompactAdaptation(.popover)
             }
-            
+
             Spacer()
-            
-            // placeholder ga keliatan di kanan
+
             Image(systemName: "chevron.left")
                 .font(.title)
                 .padding(12)
@@ -311,70 +429,94 @@ struct ShadeMapView: View {
         }
         .padding(.horizontal, 16)
     }
-    
-    private func recalcAndGlow(for sliderValue: Double, date: Date) async {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Asia/Jakarta")!
-        
-        let h = Int(sliderValue)
-        let m = Int((sliderValue - Double(h)) * 60)   // 0.25 → 15 menit
-        
-        // PERBAIKAN: Gunakan parameter 'date', bukan 'Date()' (hari ini)
-        guard let start = cal.date(bySettingHour: h, minute: m, second: 0, of: date) else { return }
-        let end = start.addingTimeInterval(15 * 60)   // segmen 15 menit
-        
-        viewModel.startDate = start
-        viewModel.endDate = end
-        viewModel.stepMinutes = 15
-        
-        await viewModel.calculate()
-        
-        let safe = Set(
-            viewModel.shadowResults
-                .filter { $0.safetyStatus == .fullySafe || $0.safetyStatus == .recommended }
-                .map { $0.spot.id }
-        )
-        
-        scene.updateGlow(safeSpotIDs: safe)
-    }
-    
+
     private var mapFooter: some View {
         Button("View Details") {
-            let now = Date()
-            var cal = Calendar(identifier: .gregorian)
-            cal.timeZone = TimeZone(identifier: "Asia/Jakarta")!
-            
-            let comp = cal.dateComponents([.hour, .minute], from: now)
-            let currentHour = comp.hour ?? 0
-            let currentMinute = comp.minute ?? 0
-            
-            let totalMinutes = (currentHour * 60) + currentMinute
-            let roundedMinutes = Int((Double(totalMinutes) / 15.0).rounded()) * 15
-            
-            let finalHour = roundedMinutes / 60
-            let finalMinute = roundedMinutes % 60
-            
-            guard let roundedDate = cal.date(bySettingHour: finalHour, minute: finalMinute, second: 0, of: now) else { return }
-            
-            let currentHourSlider = Double(finalHour) + (Double(finalMinute) / 60.0)
-            
-            selectedDate = roundedDate
-            hour = currentHourSlider
-            
-            scene.moveCamera(to: [1.2, 3.5, 4.5], target: [0, -1.0, 0], duration: 1.0)
-            scene.syncController(position: [1.2, 3.5, 4.5], target: [0, -1.0, 0])
-            scene.showShadeSpots()
-            showDetail = true
-            Task { await recalcAndGlow(for: currentHourSlider, date: roundedDate) }
+            viewModel.handleViewDetails()
         }
         .buttonStyle(.borderedProminent)
-        .tint(Color(red: 153/255, green: 69/255, blue: 236/255))
+        .tint(viewModel.currentPark.isMapped ? Color(red: 153/255, green: 69/255, blue: 236/255) : Color.gray)
+        .disabled(!viewModel.currentPark.isMapped)
         .controlSize(.large)
         .padding(.bottom, 30)
     }
-    
-    private var sun: SunPosition {
-        //scene.sunPosition(hour: Int(hour.rounded()), location: parkLocation)
-        scene.sunPosition(hour: hour, location: parkLocation)
+
+    struct WeatherBadge: View {
+        let temperatureCelsius: Int
+        let symbolName: String
+
+        var body: some View {
+            HStack(spacing: 6) {
+                Image(systemName: symbolName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .symbolRenderingMode(.multicolor)
+
+                Text("\(temperatureCelsius)°")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundStyle(.primary.opacity(0.72))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .glassEffect(.regular, in: Capsule())
+            .shadow(color: Color.black.opacity(0.10), radius: 8, x: 0, y: 4)
+            .foregroundColor(.gray)
+        }
+    }
+}
+
+extension ShadeMapView {
+    private var tapGesture: some Gesture {
+        SpatialTapGesture()
+            .targetedToAnyEntity()
+            .onEnded { value in
+
+                if let spot = viewModel.scene.spotForEntity(value.entity.name) {
+                    withAnimation(.spring(duration: 0.3)) {
+                        viewModel.selectedSpot = spot
+                        viewModel.tapLocation = value.location
+                    }
+                } else {
+                    withAnimation(.spring(duration: 0.3)) {
+                        viewModel.selectedSpot = nil
+                    }
+                }
+            }
+    }
+
+    private var panGesture: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                let dx = Float(value.translation.width - lastDrag.width)
+                let dy = Float(value.translation.height - lastDrag.height)
+                viewModel.scene.pan(dx: dx, dy: dy)
+                lastDrag = value.translation
+            }
+            .onEnded { _ in
+                lastDrag = .zero
+            }
+    }
+
+    private var rotateGesture: some Gesture {
+        RotateGesture()
+            .onChanged { value in
+                let delta = Float(value.rotation.radians - lastRotation)
+                viewModel.scene.rotate(dx: delta * 100)
+                lastRotation = value.rotation.radians
+            }
+            .onEnded { _ in
+                lastRotation = 0
+            }
+    }
+
+    private var zoomGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                let delta = Float(value.magnification - lastMag) * 2
+                viewModel.scene.zoom(delta: delta)
+                lastMag = value.magnification
+            }
+            .onEnded { _ in
+                lastMag = 1
+            }
     }
 }

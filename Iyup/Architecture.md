@@ -1,51 +1,77 @@
-# Iyup Feature-First MVVM Structure
+# Iyup Architecture
 
-## Major feature
-Project dipisah menjadi empat feature utama:
-
-1. `ShadeMap` untuk visualisasi map 3D dan arah cahaya matahari.
-2. `Deterministic` untuk kalkulasi timeline teduh/kena matahari.
-3. `ML` untuk forecast lux, suhu, dan occupancy.
-4. `Score` untuk orkestrasi dan ranking final.
-
-
-## App Composition
-
-`App/Composition/AppComposition.swift` menjadi tempat dependency wiring. File ini membuat service Core ML atau fallback mock, menyiapkan lokasi, spot demo, raycast service, deterministic engine, scoring engine, lalu mengembalikan ViewModel untuk `ContentView`.
-
-## Arah data utama
+## Prinsip struktur
+Project memakai pola feature-first MVVM. Setiap fitur menyimpan model, service, view model, dan view-nya sendiri supaya perubahan di satu fitur tidak menyebar ke folder global.
 
 ```text
-App
-→ Score ViewModel
-→ Deterministic engine
-→ ShadowIntervalResult
-→ ML forecast service
-→ MLShadeEnvironmentForecastPoint
-→ Score engine
-→ MLShadeScoredSpotResult
-→ View
+Iyup/
+├─ App/
+│  ├─ Composition/
+│  └─ Views/
+├─ Features/
+│  └─ <FeatureName>/
+│     ├─ Models/
+│     ├─ Services/
+│     ├─ ViewModels/
+│     ├─ Views/
+│     │  └─ Components/
+│     └─ <FeatureName>.md
+├─ Shared/
+│  ├─ Location/
+│  ├─ Protocols/
+│  ├─ SharedModels/
+│  └─ Sun/
+│     ├─ Models/
+│     └─ Services/
+└─ Resources/
+   ├─ Assets.xcassets/
+   └─ RealityKit/
 ```
 
 ## Arah dependency
-
 ```text
-App
-↓
-Features
-↓
-Shared
+App → Features → Shared
 ```
 
-Feature tidak perlu saling import secara langsung. Kontrak lintas feature diletakkan di `Shared/Protocols`.
+Aturan utamanya:
+- `App/Composition` bertugas melakukan dependency wiring.
+- `Features` boleh memakai model/protocol/service dari `Shared`.
+- `Shared` tidak boleh bergantung ke feature tertentu.
+- View hanya mengatur UI dan interaksi ringan.
+- ViewModel menyimpan state dan mengorkestrasi service.
+- Service berisi akses framework, kalkulasi, persistence, notifikasi, atau adapter eksternal.
+
+## App utama
+Entry app adalah `IyupApp.swift` yang membuka `RootTabView`. `RootTabView` berisi alur utama: Parks/ShadeMap, Trips, dan Search placeholder.
+
+`ContentView` debug tab lama sudah dihapus supaya tidak ada UI demo yang ikut menjadi bagian project aktif.
+
+## App Composition
+`App/Composition/AppComposition.swift` menjadi pusat pembuatan dependency. File ini membuat service Core ML atau fallback mock, menyiapkan lokasi taman, spot bench, raycast service, deterministic engine, scoring engine, WeatherKit service, Location service, dan ViewModel yang dibutuhkan halaman.
+
+`AppComposition.makePlanTripViewModel()` menyediakan dependency untuk Plan Trip. Geometry taman sekarang disimpan di `Features/Deterministic/Data/ParkGeometryCatalog.swift` supaya data runtime tidak tercampur dengan utilitas export CSV.
 
 ## Resource
-- `Features/ML/Resources` menyimpan model ML dan JSON karena resource tersebut spesifik fitur ML.
-- `Resources/Reality` menyimpan file map 3D karena dipakai oleh ShadeMap.
-- `Resources/Assets.xcassets` menyimpan asset app.
+- `Resources/RealityKit/park.usdz` adalah asset 3D taman utama.
+- `Resources/RealityKit/map_pin_location_pin.usdz` adalah asset pin shade spot.
+- `Resources/Assets.xcassets` menyimpan logo, app icon, accent color, dan image pendukung.
+- `Features/ML/Resources` menyimpan model `.mlmodel` dan JSON feature list karena resource tersebut spesifik untuk fitur ML.
 
-## Perubahan dari struktur lama
-- `Views/`, `ViewModels/`, `Models/`, dan `Services/` root sudah diganti menjadi feature-first.
-- `ShadeMap.swift` dipecah menjadi `ShadeMapView.swift` dan `ParkScene.swift`.
-- Synthetic tree generator di `ParkScene` dihapus.
-- `ContentView` sekarang punya 3 tab: Deterministik, Ranking ML, dan Shade Map.
+## Cleanup fase ini
+Fase cleanup ini menghapus UI debug lama, modul Analytics, ParkDetail sheet wrapper lama, dan utilitas export CSV. Core function yang masih mungkin dipakai fitur utama atau future feature tetap dipertahankan.
+
+Dihapus:
+- `App/Views/ContentView.swift`
+- `Features/Analytics/`
+- standalone/demo views untuk Deterministic, Score Ranking, Location, Weather, dan ML manual debug
+- helper UI/debug-only yang hanya dipakai view demo tersebut
+- `Features/ParkDetail/Views/ParkDetailSheetView.swift` karena sudah digantikan oleh `ParkDetailSheetContent.swift`
+- `Features/Deterministic/Services/SunExposureProjectionExporter.swift` dan model export CSV-nya
+
+Dipertahankan:
+- Core deterministic services/models, termasuk `ParkGeometryCatalog`
+- Core score and ML services/models/view model
+- Weather models/services/view model
+- Location models/services/view model
+- Seluruh IoT module
+- ShadeMap, ParkDetail, Trips, dan Shared modules

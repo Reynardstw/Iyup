@@ -6,7 +6,6 @@ enum SceneZAxisDirection: Sendable {
     case northNegative
 }
 
-
 struct SunVectorConverter {
     let zAxisDirection: SceneZAxisDirection
 

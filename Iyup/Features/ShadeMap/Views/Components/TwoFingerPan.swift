@@ -6,14 +6,11 @@ struct TwoFingerPan: UIViewRepresentable {
     var onEnded: () -> Void
 
     func makeUIView(context: Context) -> UIView {
-        // Kita menggunakan custom view di bawah
         let view = TransparentGestureView()
         view.backgroundColor = .clear
-        
-        // 1. PENTING: Matikan interaksi pada view ini agar
-        // ia tidak menjadi "tameng" yang memblokir tap ke RealityView
+
         view.isUserInteractionEnabled = false
-        
+
         let pan = UIPanGestureRecognizer(
             target: context.coordinator,
             action: #selector(Coordinator.handle(_:))
@@ -21,10 +18,9 @@ struct TwoFingerPan: UIViewRepresentable {
         pan.minimumNumberOfTouches = 2
         pan.maximumNumberOfTouches = 2
         pan.delegate = context.coordinator
-        
-        // Simpan referensi gesture ke custom view agar bisa dipasang ke Window
+
         view.panGesture = pan
-        
+
         return view
     }
 
@@ -51,31 +47,26 @@ struct TwoFingerPan: UIViewRepresentable {
             }
         }
 
-        // 2. PENTING: Izinkan gesture 2 jari UIKit ini berjalan
-        // berbarengan dengan gesture bawaan SwiftUI (Tap, Zoom, Pan 1 jari)
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             return true
         }
     }
 }
 
-// 3. CUSTOM VIEW: Trik menempelkan Gesture langsung ke Window Induk
 class TransparentGestureView: UIView {
     var panGesture: UIPanGestureRecognizer?
 
-    // Saat View masuk ke layar (overlay aktif)
     override func didMoveToWindow() {
         super.didMoveToWindow()
         if let window = self.window, let pan = panGesture {
-            window.addGestureRecognizer(pan) // Pasang gesture secara global
+            window.addGestureRecognizer(pan)
         }
     }
 
-    // Saat View dihapus dari layar (overlay hilang)
     override func willMove(toWindow newWindow: UIWindow?) {
         super.willMove(toWindow: newWindow)
         if newWindow == nil, let window = self.window, let pan = panGesture {
-            window.removeGestureRecognizer(pan) // Bersihkan gesture agar tidak bocor
+            window.removeGestureRecognizer(pan)
         }
     }
 }

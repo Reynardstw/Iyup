@@ -41,14 +41,12 @@ final class MLShadeRecommendationViewModel {
     }
 
     func calculate(debugRunID: String) async {
-        let totalStart = CFAbsoluteTimeGetCurrent()
 
         isCalculating = true
         errorMessage = nil
 
         defer {
             isCalculating = false
-            print("⏱[MLShade][\(debugRunID)] calculate total \(ms(totalStart))")
         }
 
         do {
@@ -60,28 +58,19 @@ final class MLShadeRecommendationViewModel {
                 spots: spots
             )
 
-            let shadowStart = CFAbsoluteTimeGetCurrent()
             let deterministicResults = try recommendationEngine.recommend(request: request)
-            print("⏱[MLShade][\(debugRunID)] deterministic \(ms(shadowStart))")
 
             shadowResults = deterministicResults
 
-            let scoringStart = CFAbsoluteTimeGetCurrent()
             scoredResults = try await scoringEngine.score(
                 shadowResults: deterministicResults,
                 referenceDate: startDate,
                 debugRunID: debugRunID
             )
-            print("⏱[MLShade][\(debugRunID)] scoring \(ms(scoringStart))")
         } catch {
             shadowResults = []
             scoredResults = []
             errorMessage = error.localizedDescription
-            print("⏱[MLShade][\(debugRunID)] calculate failed after \(ms(totalStart))")
         }
-    }
-
-    private func ms(_ start: CFAbsoluteTime) -> String {
-        String(format: "%.1f ms", (CFAbsoluteTimeGetCurrent() - start) * 1000)
     }
 }

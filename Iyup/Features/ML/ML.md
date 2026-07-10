@@ -12,3 +12,6 @@ Melakukan forecast environment untuk tiap spot, terutama lux, suhu, dan occupanc
 
 ## Alur data
 ML menerima `ShadowIntervalResult`, mengambil timeline shadow, membuat feature dictionary sesuai JSON, menjalankan model short/long horizon, lalu mengembalikan list `MLShadeEnvironmentForecastPoint`.
+
+## Debug logging
+Service Core ML dan mock forecast punya flag debug internal yang default-nya mati. Flag ini hanya dinyalakan saat perlu investigasi output model, karena logging prediksi bisa sangat banyak dan dapat membuat layar yang memuat Park Detail terasa lag.

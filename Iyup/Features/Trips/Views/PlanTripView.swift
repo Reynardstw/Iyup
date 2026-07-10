@@ -10,10 +10,9 @@ struct PlanTripView: View {
     let city: String
     let address: String
 
-    /// Height reserved for the live 3D map that stays in ShadeMapView.
-    /// PlanTrip does not build another RealityView; this clear slot lets the existing
-    /// map appear as the preview window.
     private let mapTopSpacing: CGFloat
+
+    private let editingTrip: Trip?
 
     private let onClose: (() -> Void)?
     private let onSelectedDateChange: (Date) -> Void
@@ -30,6 +29,7 @@ struct PlanTripView: View {
         city: String = "",
         address: String = "",
         mapTopSpacing: CGFloat = 0,
+        editingTrip: Trip? = nil,
         onClose: (() -> Void)? = nil,
         onSelectedDateChange: @escaping (Date) -> Void = { _ in },
         onSaveTrip: ((Trip) -> Void)? = nil
@@ -39,33 +39,12 @@ struct PlanTripView: View {
         self.city = city
         self.address = address
         self.mapTopSpacing = mapTopSpacing
+        self.editingTrip = editingTrip
         self.onClose = onClose
         self.onSelectedDateChange = onSelectedDateChange
         self.onSaveTrip = onSaveTrip
         _selectedDate = selectedDate
         _viewModel = State(initialValue: viewModel)
-    }
-
-    // Compatibility initializer for old call sites.
-    // The scene and scoreViewModel are intentionally ignored because this page
-    // should not reload a second RealityKit map.
-    init(
-        parkName: String,
-        recommendedShadeWindow: String,
-        scene: ParkScene,
-        viewModel: PlanTripViewModel,
-        scoreViewModel: MLShadeRecommendationViewModel
-    ) {
-        self.init(
-            parkName: parkName,
-            recommendedShadeWindow: recommendedShadeWindow,
-            selectedDate: .constant(viewModel.selectedDate),
-            viewModel: viewModel,
-            mapTopSpacing: 0,
-            onClose: nil,
-            onSelectedDateChange: { _ in },
-            onSaveTrip: nil
-        )
     }
 
     var body: some View {
@@ -81,7 +60,7 @@ struct PlanTripView: View {
                     .minimumScaleFactor(0.85)
                     .padding(.top, 132)
 
-                mapWindowSlot
+                mapPreviewWindow
 
                 shadeConditionSection
 
@@ -108,16 +87,21 @@ struct PlanTripView: View {
         }
         .onAppear {
             viewModel.selectedDate = selectedDate
+
+            if let editingTrip {
+                viewModel.alertOption = editingTrip.alertOption
+            }
         }
         .onChange(of: selectedDate) { _, newValue in
             viewModel.selectedDate = newValue
             onSelectedDateChange(newValue)
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var topBar: some View {
         TripHeaderBar(
-            title: "Plan Your Trip",
+            title: editingTrip == nil ? "Plan Your Trip" : "Edit Trip",
             trailingTitle: "Save",
             trailingProminent: true,
             onBack: { close() },
@@ -143,6 +127,7 @@ struct PlanTripView: View {
     @discardableResult
     private func saveTrip() -> Trip {
         let trip = Trip(
+            id: editingTrip?.id ?? UUID(),
             parkName: parkName,
             city: city,
             address: address,
@@ -151,19 +136,61 @@ struct PlanTripView: View {
             date: selectedDate,
             recommendedShadeWindow: recommendedShadeWindow,
             alertOption: viewModel.alertOption,
-            shadeConditionText: viewModel.shadeConditionText
+            shadeConditionText: viewModel.shadeConditionText,
+            savedAt: editingTrip?.savedAt ?? Date()
         )
-        TripStore.shared.add(trip)
-        Task { await TripNotificationScheduler.schedule(for: trip) }
+
+        if editingTrip == nil {
+            TripStore.shared.add(trip)
+            Task { await TripNotificationScheduler.schedule(for: trip) }
+        } else {
+            TripStore.shared.update(trip)
+        }
+
         return trip
     }
 
-    private var mapWindowSlot: some View {
-        Color.clear
+    @ViewBuilder
+    private var mapPreviewWindow: some View {
+        if mapTopSpacing > 0 {
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: mapTopSpacing)
+                .padding(.horizontal, 8)
+                .accessibilityHidden(true)
+        } else {
+            StandalonePark3DPreview(
+                location: previewParkLocation,
+                hour: selectedHour,
+                highlightedSpotIDs: viewModel.shadedSpotIDs
+            )
             .frame(maxWidth: .infinity)
-            .frame(height: max(120, mapTopSpacing))
+            .frame(height: 132)
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding(.horizontal, 8)
-            .accessibilityHidden(true)
+        }
+    }
+
+    private var previewParkLocation: ParkLocation {
+        if let editingTrip {
+            return ParkLocation(
+                latitude: editingTrip.latitude,
+                longitude: editingTrip.longitude,
+                timeZoneIdentifier: viewModel.parkLocation.timeZoneIdentifier
+            )
+        }
+
+        return viewModel.parkLocation
+    }
+
+    private var selectedHour: Double {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = previewParkLocation.timeZone
+
+        let components = calendar.dateComponents([.hour, .minute], from: selectedDate)
+        let hour = Double(components.hour ?? 0)
+        let minute = Double(components.minute ?? 0) / 60.0
+        return hour + minute
     }
 
     private var shadeConditionSection: some View {
@@ -241,12 +268,11 @@ struct PlanTripView: View {
 }
 
 #Preview {
-    let bundle = AppComposition.makePlanTripBundle()
     PlanTripView(
         parkName: "Taman Bendera Pusaka",
         recommendedShadeWindow: "16.00 - 18.00",
         selectedDate: .constant(Date()),
-        viewModel: bundle.planTripViewModel,
+        viewModel: AppComposition.makePlanTripViewModel(),
         mapTopSpacing: 150
     )
 }

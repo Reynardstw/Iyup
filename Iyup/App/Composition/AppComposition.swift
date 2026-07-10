@@ -33,15 +33,14 @@ enum AppComposition {
         let startDate = jakartaCalendar.date(bySettingHour: 15, minute: 0, second: 0, of: now) ?? now
         let endDate = jakartaCalendar.date(bySettingHour: 17, minute: 0, second: 0, of: now)
             ?? now.addingTimeInterval(7_200)
-      
-        let location = SunExposureProjectionExporter.tamanBenderaPusakaLocation
-        let spots = SunExposureProjectionExporter.benchSpots
-        let treeOccluders = SunExposureProjectionExporter.treeOccluders
+
+        let location = ParkGeometryCatalog.tamanBenderaPusakaLocation
+        let spots = ParkGeometryCatalog.benchSpots
+        let treeOccluders = ParkGeometryCatalog.treeOccluders
 
         let raycastService = GeometryShadowRaycastService(
             occluders: treeOccluders
         )
-
 
         let calculator = ShadowIntervalCalculator(
             sunPositionService: OfficialSunKitSunPositionService(),
@@ -49,7 +48,7 @@ enum AppComposition {
             sunVectorConverter: SunVectorConverter(zAxisDirection: .northPositive),
             shadeCoverageThreshold: 0.70,
             benchSampleRadius: 0.50
-            
+
         )
 
         let recommendationEngine = ShadeRecommendationEngine(calculator: calculator)
@@ -74,9 +73,9 @@ enum AppComposition {
     }
 
     static func makeParkDetailViewModel(place: NearbyPlace = .tamanBenderaPusaka) -> ParkDetailViewModel {
-        let location = SunExposureProjectionExporter.tamanBenderaPusakaLocation
-        let spots = SunExposureProjectionExporter.benchSpots
-        let treeOccluders = SunExposureProjectionExporter.treeOccluders
+        let location = ParkGeometryCatalog.tamanBenderaPusakaLocation
+        let spots = ParkGeometryCatalog.benchSpots
+        let treeOccluders = ParkGeometryCatalog.treeOccluders
 
         let raycastService = GeometryShadowRaycastService(
             occluders: treeOccluders
@@ -113,27 +112,10 @@ enum AppComposition {
         )
     }
 
-
-    /// Semua dependency Plan Trip dalam satu bundle, biar bisa di-preload sekaligus
-    /// (scene, deterministic VM, dan score VM untuk glow ML).
-    struct PlanTripBundle {
-        let scene: ParkScene
-        let planTripViewModel: PlanTripViewModel
-        let scoreViewModel: MLShadeRecommendationViewModel
-    }
-
-    static func makePlanTripBundle() -> PlanTripBundle {
-        PlanTripBundle(
-            scene: ParkScene(),
-            planTripViewModel: makePlanTripViewModel(),
-            scoreViewModel: makeScoreViewModel()
-        )
-    }
-
     static func makePlanTripViewModel() -> PlanTripViewModel {
-        let location = SunExposureProjectionExporter.tamanBenderaPusakaLocation
-        let spots = SunExposureProjectionExporter.benchSpots
-        let treeOccluders = SunExposureProjectionExporter.treeOccluders
+        let location = ParkGeometryCatalog.tamanBenderaPusakaLocation
+        let spots = ParkGeometryCatalog.benchSpots
+        let treeOccluders = ParkGeometryCatalog.treeOccluders
 
         let raycastService = GeometryShadowRaycastService(
             occluders: treeOccluders

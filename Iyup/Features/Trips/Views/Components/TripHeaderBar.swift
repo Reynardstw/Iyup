@@ -1,14 +1,9 @@
 import SwiftUI
 
-/// Header reusable untuk PlanTripView & EditTripView.
-/// Patokan layout/gaya dari "Trip Details" (EditTripView):
-/// back (kiri) • judul (tengah) • tombol aksi (kanan).
 struct TripHeaderBar: View {
     let title: String
     let trailingTitle: String
 
-    /// true → tombol kanan gaya prominent (ungu, teks putih) mis. "Save".
-    /// false → gaya glass polos mis. "Edit".
     var trailingProminent: Bool = false
 
     let onBack: () -> Void

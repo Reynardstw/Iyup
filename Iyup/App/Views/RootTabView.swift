@@ -9,7 +9,6 @@ private enum RootTab: Hashable {
 struct RootTabView: View {
     @State private var selectedTab: RootTab = .parks
 
-    // Ungu brand (sama dengan accent app).
     private let brandPurple = Color(red: 153/255, green: 69/255, blue: 236/255)
 
     var body: some View {
@@ -26,16 +25,14 @@ struct RootTabView: View {
                 TripsView()
             }
 
-            // Tombol search terpisah (floating) — muncul karena role: .search.
             Tab(value: RootTab.search, role: .search) {
                 SearchPlaceholderView()
             }
         }
-        .tint(brandPurple)   // warna tab terpilih jadi ungu
+        .tint(brandPurple)
     }
 }
 
-/// Placeholder isi tab Search. Ganti dengan layar search asli nanti.
 private struct SearchPlaceholderView: View {
     var body: some View {
         NavigationStack {

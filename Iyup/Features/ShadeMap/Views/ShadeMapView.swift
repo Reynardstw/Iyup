@@ -3,21 +3,18 @@ import RealityKit
 import UIKit
 
 struct ShadeMapView: View {
-    /// Lapor ke parent (RootTabView) saat masuk/keluar mode detail (View Details),
-    /// supaya tab bar bisa disembunyikan.
     var onDetailActiveChange: (Bool) -> Void = { _ in }
 
     var onTripSavedNavigateToTrips: () -> Void = {}
-    
+
     @State private var viewModel = ShadeMapViewModel()
 
-    // Gesture state tetap di View agar update 60fps tidak membebani ViewModel.
     @State private var lastDrag: CGSize = .zero
     @State private var lastMag: CGFloat = 1
     @State private var lastPan: CGSize = .zero
     @State private var lastRotation: Double = 0
     @State private var restoreSheetAfterCalendar = false
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -57,7 +54,6 @@ struct ShadeMapView: View {
                         Task { await viewModel.parkDetailViewModel.selectWeekday(index) }
                     }
                 )
-                .onAppear { print("⏱[sheet] ParkDetailSheetContent onAppear") }
                 .presentationDetents(
                     [viewModel.peekDetent, viewModel.midDetent, viewModel.largeDetent],
                     selection: $viewModel.sheetDetent
@@ -78,7 +74,6 @@ struct ShadeMapView: View {
     }
 }
 
-// MARK: - UI Layers
 extension ShadeMapView {
     private var prewarmView: some View {
         VStack(spacing: 0) {
@@ -156,11 +151,11 @@ extension ShadeMapView {
 
     private var lockPlaceholderLayer: some View {
         ZStack {
-            Image("tebet_silhouette_smooth")   // ganti sesuai nama asset kamu
+            Image("tebet_silhouette_smooth")
                                     .resizable()
                                     .scaledToFit()
                                     .frame(maxWidth: 220)
-                                    .rotationEffect(.degrees(30))   // putar sesuai selera
+                                    .rotationEffect(.degrees(30))
                                     .opacity(0.8)
 
             Image(systemName: "lock")
@@ -173,9 +168,7 @@ extension ShadeMapView {
 
     private var realityMapLayer: some View {
         RealityView { content in
-            let t0 = CFAbsoluteTimeGetCurrent()
             let root = await viewModel.scene.build()
-            print("⏱[3D] ShadeMap scene.build took \(viewModel.ms(t0))")
 
             content.add(root)
             viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
@@ -185,7 +178,6 @@ extension ShadeMapView {
             }
 
             viewModel.shadeMapReady = true
-            print("⏱[3D] ShadeMap make done (+\(viewModel.ms(t0)))")
         } update: { _ in
             viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
         }
@@ -312,7 +304,6 @@ extension ShadeMapView {
     }
 }
 
-// MARK: - Reusable UI Components
 extension ShadeMapView {
     @ViewBuilder
     private func cardPopupOverlay(at location: CGPoint) -> some View {
@@ -473,13 +464,11 @@ extension ShadeMapView {
     }
 }
 
-// MARK: - Gestures
 extension ShadeMapView {
     private var tapGesture: some Gesture {
         SpatialTapGesture()
             .targetedToAnyEntity()
             .onEnded { value in
-                print("tap:", value.entity.name)
 
                 if let spot = viewModel.scene.spotForEntity(value.entity.name) {
                     withAnimation(.spring(duration: 0.3)) {

@@ -1,25 +1,13 @@
 import Foundation
 
-
-
-// Set true hanya saat butuh debug ML. Default off: hilangkan banjir log per recalc.
-private let mlShadeVerboseLogging = false
-@inline(__always) private func mlLog(_ message: @autoclosure () -> String) {
-    if mlShadeVerboseLogging { Swift.print(message()) }
-}
-
 struct MLShadeMockEnvironmentForecastService: MLShadeEnvironmentForecastProviding {
     func forecast(
         for shadowResult: ShadowIntervalResult,
         referenceDate: Date,
         debugRunID: String
     ) async throws -> [MLShadeEnvironmentForecastPoint] {
-        mlLog("🧪 [MLShade][\(debugRunID)] MOCK forecast service used")
-        mlLog("🧪 [MLShade][\(debugRunID)] Spot: \(shadowResult.spot.id) - \(shadowResult.spot.name)")
-        mlLog("🧪 [MLShade][\(debugRunID)] Timeline count: \(shadowResult.timeline.count)")
 
         guard !shadowResult.timeline.isEmpty else {
-            mlLog("❌ [MLShade][\(debugRunID)] Empty timeline in mock service")
             throw MLShadeForecastError.emptyTimeline(shadowResult.spot.name)
         }
 
@@ -30,8 +18,6 @@ struct MLShadeMockEnvironmentForecastService: MLShadeEnvironmentForecastProvidin
             let lux = shaded ? 900.0 : min(70_000.0, 8_000.0 + altitude * 850.0)
             let temperature = shaded ? 30.0 : min(36.0, 30.0 + altitude / 25.0)
             let occupancy = shaded ? 0.45 : 0.25
-
-            mlLog("🧪 [MLShade][\(debugRunID)] Mock point: date=\(entry.sampleDate), lux=\(lux), temp=\(temperature), occ=\(occupancy)")
 
             return MLShadeEnvironmentForecastPoint(
                 sampleDate: entry.sampleDate,

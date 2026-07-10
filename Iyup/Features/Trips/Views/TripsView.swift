@@ -77,8 +77,6 @@ struct TripsView: View {
     }
 }
 
-// MARK: - Trip Card
-
 private struct TripCard: View {
     let trip: Trip
     let onTap: () -> Void

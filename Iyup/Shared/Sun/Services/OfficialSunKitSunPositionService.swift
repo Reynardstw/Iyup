@@ -2,7 +2,6 @@ import Foundation
 import CoreLocation
 import SunKit
 
-
 struct OfficialSunKitSunPositionService: SunPositionProviding {
     func position(
         at date: Date,

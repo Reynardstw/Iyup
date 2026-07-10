@@ -1,10 +1,3 @@
-//
-//  EditTripView.swift
-//  Iyup
-//
-//  Created by Albert Tandy Harison on 10/07/26.
-//
-
 import SwiftUI
 import MapKit
 import CoreLocation
@@ -16,7 +9,10 @@ struct EditTripView: View {
 
     @State private var selectedDate: Date
     @State private var alertOption: TripAlertOption
+    @State private var shadeConditionText: String
     @State private var position: MapCameraPosition
+    @State private var showPlanTrip = false
+    @State private var planTripViewModel = AppComposition.makePlanTripViewModel()
 
     private let pageBackground = Color(red: 245/255, green: 247/255, blue: 250/255)
 
@@ -24,6 +20,7 @@ struct EditTripView: View {
         self.trip = trip
         _selectedDate = State(initialValue: trip.date)
         _alertOption = State(initialValue: trip.alertOption)
+        _shadeConditionText = State(initialValue: trip.shadeConditionText)
         _position = State(
             initialValue: .region(
                 MKCoordinateRegion(
@@ -65,6 +62,26 @@ struct EditTripView: View {
         }
         .background(pageBackground.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: $showPlanTrip) {
+            PlanTripView(
+                parkName: currentTrip.parkName,
+                recommendedShadeWindow: currentTrip.recommendedShadeWindow,
+                selectedDate: $selectedDate,
+                viewModel: planTripViewModel,
+                city: currentTrip.city,
+                address: currentTrip.address,
+                editingTrip: currentTrip,
+                onSelectedDateChange: { newDate in
+                    selectedDate = newDate
+                },
+                onSaveTrip: { updatedTrip in
+                    selectedDate = updatedTrip.date
+                    alertOption = updatedTrip.alertOption
+                    shadeConditionText = updatedTrip.shadeConditionText
+                    showPlanTrip = false
+                }
+            )
+        }
     }
 
     private var header: some View {
@@ -74,7 +91,7 @@ struct EditTripView: View {
             trailingProminent: false,
             onBack: { dismiss() },
             onTrailing: {
-                // TODO: connect editable mode later.
+                showPlanTrip = true
             }
         )
     }
@@ -133,8 +150,8 @@ struct EditTripView: View {
                     .font(.system(size: 15, weight: .medium))
             }
 
-            if !trip.shadeConditionText.isEmpty {
-                Text(trip.shadeConditionText)
+            if !shadeConditionText.isEmpty {
+                Text(shadeConditionText)
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -144,6 +161,22 @@ struct EditTripView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 38))
+    }
+
+    private var currentTrip: Trip {
+        Trip(
+            id: trip.id,
+            parkName: trip.parkName,
+            city: trip.city,
+            address: trip.address,
+            latitude: trip.latitude,
+            longitude: trip.longitude,
+            date: selectedDate,
+            recommendedShadeWindow: trip.recommendedShadeWindow,
+            alertOption: alertOption,
+            shadeConditionText: shadeConditionText,
+            savedAt: trip.savedAt
+        )
     }
 
     private var tripCoordinate: CLLocationCoordinate2D {

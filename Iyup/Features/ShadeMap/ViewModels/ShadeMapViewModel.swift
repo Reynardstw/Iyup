@@ -14,27 +14,22 @@ enum ShadeMapDisplayMode: Equatable {
 
 @Observable
 class ShadeMapViewModel {
-    // MARK: - Main state
     var hour: Double = 10
     var showDetail = false
     var currentParkIndex = 0
     var selectedDate = Date()
     var showCalendar = false
 
-    // MARK: - Map interaction state
     var selectedSpot: ShadeSpot? = nil
     var tapLocation: CGPoint? = nil
     var selectedPin: Entity? = nil
 
-    // MARK: - Scene + scoring dependencies
     var scene = ParkScene()
     var scoreViewModel = AppComposition.makeScoreViewModel()
 
-    // MARK: - Park detail + plan trip dependencies
     var parkDetailViewModel = AppComposition.makeParkDetailViewModel()
     var planTripViewModel = AppComposition.makePlanTripViewModel()
 
-    // MARK: - Sheet + Plan Trip state
     var showSheet = false
     var showPlanTrip = false
     var selectedTripForEditing: Trip? = nil
@@ -43,7 +38,6 @@ class ShadeMapViewModel {
     var mapDisplayMode: ShadeMapDisplayMode = .main
     var isSyncingSharedDate = false
 
-    // MARK: - UI constants used by ShadeMapView
     let peekDetent = PresentationDetent.height(73)
     let midDetent = PresentationDetent.fraction(0.5)
     let largeDetent = PresentationDetent.large
@@ -57,7 +51,6 @@ class ShadeMapViewModel {
 
     var floatingControlsOpacity: Double { 1 }
 
-    // MARK: - Park data
     let parkLocation = ParkLocation(
         latitude: -6.245542,
         longitude: 106.794547,
@@ -87,12 +80,6 @@ class ShadeMapViewModel {
         scene.sunPosition(hour: hour, location: parkLocation)
     }
 
-    // MARK: - Debug helper
-    func ms(_ t0: CFAbsoluteTime) -> String {
-        String(format: "%.1fms", (CFAbsoluteTimeGetCurrent() - t0) * 1000)
-    }
-
-    // MARK: - Carousel actions
     func nextPark() {
         currentParkIndex = (currentParkIndex + 1) % parkList.count
     }
@@ -101,19 +88,13 @@ class ShadeMapViewModel {
         currentParkIndex = (currentParkIndex - 1 + parkList.count) % parkList.count
     }
 
-    // MARK: - Lifecycle / loading
     func loadParkDetail() async {
-        let t0 = CFAbsoluteTimeGetCurrent()
         await parkDetailViewModel.load()
-        print("⏱[task] parkDetailVM.load took \(ms(t0))")
     }
 
-    // MARK: - Detail mode
     func handleViewDetails() {
         guard currentPark.isMapped else { return }
 
-        let t0 = CFAbsoluteTimeGetCurrent()
-        print("⏱[VD] tap start")
 
         let now = Date()
         var cal = Calendar(identifier: .gregorian)
@@ -145,16 +126,12 @@ class ShadeMapViewModel {
         parkDetailViewModel.selectedHour = min(18, max(6, Int(currentHourSlider.rounded())))
         planTripViewModel.selectedDate = roundedDate
 
-        print("⏱[VD] before applyMapDisplayMode(.detail) (+\(ms(t0)))")
         applyMapDisplayMode(.detail, duration: 1.0)
-        print("⏱[VD] after applyMapDisplayMode(.detail) (+\(ms(t0)))")
 
         scene.showShadeSpots()
-        print("⏱[VD] after showShadeSpots (+\(ms(t0)))")
 
         showDetail = true
         showSheet = true
-        print("⏱[VD] after set flags (+\(ms(t0)))")
 
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -162,7 +139,6 @@ class ShadeMapViewModel {
             self.isSyncingSharedDate = false
         }
 
-        print("⏱[VD] tap end sync-block (+\(ms(t0)))")
     }
 
     func closeDetail() {
@@ -174,7 +150,6 @@ class ShadeMapViewModel {
         showPlanTrip = false
     }
 
-    // MARK: - Plan Trip mode
     func openPlanTripFromSheet() {
         planTripViewModel.selectedDate = selectedDate
         showSheet = false
@@ -243,7 +218,6 @@ class ShadeMapViewModel {
         }
     }
 
-    // MARK: - Date / hour sync
     func syncHourChange(_ newValue: Double) {
         guard !isSyncingSharedDate else { return }
 
@@ -305,7 +279,6 @@ class ShadeMapViewModel {
         return Double(c.hour ?? 0) + Double(c.minute ?? 0) / 60.0
     }
 
-    // MARK: - Camera mode
     func applyMapDisplayMode(_ mode: ShadeMapDisplayMode, duration: TimeInterval = 1.0) {
         mapDisplayMode = mode
 
@@ -338,17 +311,11 @@ class ShadeMapViewModel {
                 target: [0, -1.2, 0],
                 duration: duration
             )
-//            scene.syncController(
-//                position: [-2.2, 2.5, 0.75],
-//                target: [0, -1.2, 0]
-//            )
+
         }
     }
 
-    // MARK: - Shade calculation
     func recalcAndGlow(for sliderValue: Double, date: Date) async {
-        let t0 = CFAbsoluteTimeGetCurrent()
-        print("⏱[recalc] start")
 
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "Asia/Jakarta")!
@@ -363,9 +330,7 @@ class ShadeMapViewModel {
         scoreViewModel.endDate = end
         scoreViewModel.stepMinutes = 15
 
-        let tCalc = CFAbsoluteTimeGetCurrent()
         await scoreViewModel.calculate()
-        print("⏱[recalc] calculate() took \(ms(tCalc))")
 
         let safe = Set(
             scoreViewModel.shadowResults
@@ -373,8 +338,6 @@ class ShadeMapViewModel {
                 .map { $0.spot.id }
         )
 
-        let tGlow = CFAbsoluteTimeGetCurrent()
         scene.updateGlow(safeSpotIDs: safe)
-        print("⏱[recalc] updateGlow took \(ms(tGlow)) | total \(ms(t0))")
     }
 }

@@ -1,10 +1,3 @@
-//
-//  ShadeSpot.swift
-//  Iyup
-//
-//  Created by Albert Tandy Harison on 07/07/26.
-//
-
 import Foundation
 import RealityKit
 
@@ -19,5 +12,3 @@ struct ShadeSpot: Identifiable {
 enum ShadeLevel {
     case low, medium, high
 }
-
-

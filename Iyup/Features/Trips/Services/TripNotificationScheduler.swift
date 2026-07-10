@@ -1,10 +1,7 @@
 import Foundation
 import UserNotifications
 
-/// Jadwalkan / batalkan notifikasi lokal untuk sebuah Trip berdasarkan TripAlertOption.
 enum TripNotificationScheduler {
-
-    /// Minta izin notifikasi kalau belum pernah ditanya.
     static func requestAuthorizationIfNeeded() async {
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
@@ -13,11 +10,10 @@ enum TripNotificationScheduler {
         }
     }
 
-    /// Jadwalkan notifikasi untuk trip. Aman dipanggil untuk alert .none (langsung skip).
     static func schedule(for trip: Trip) async {
-        guard let lead = leadTime(for: trip.alertOption) else { return } // .none → skip
+        guard let lead = leadTime(for: trip.alertOption) else { return }
         let fireDate = trip.date.addingTimeInterval(-lead)
-        guard fireDate > Date() else { return } // waktu sudah lewat → skip
+        guard fireDate > Date() else { return }
 
         await requestAuthorizationIfNeeded()
 
@@ -44,13 +40,11 @@ enum TripNotificationScheduler {
         try? await center.add(request)
     }
 
-    /// Batalkan notifikasi yang sudah dijadwalkan (mis. saat trip dihapus).
     static func cancel(for trip: Trip) {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: [trip.id.uuidString])
     }
 
-    /// Offset (detik) sebelum waktu trip. nil = tidak ada notifikasi.
     private static func leadTime(for option: TripAlertOption) -> TimeInterval? {
         switch option {
         case .none:                 return nil

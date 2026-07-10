@@ -2,8 +2,6 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Penyimpanan trip berbasis UserDefaults (JSON). Reactive lewat @Observable:
-/// TripsView otomatis refresh saat `trips` berubah.
 @MainActor
 @Observable
 final class TripStore {
@@ -19,11 +17,10 @@ final class TripStore {
     }
 
     func add(_ trip: Trip) {
-        trips.insert(trip, at: 0)   // terbaru di atas
+        trips.insert(trip, at: 0)
         persist()
     }
 
-    /// Dipakai tombol Edit di Trip Details (Page 4). Ganti trip + reschedule notif.
     func update(_ trip: Trip) {
         guard let idx = trips.firstIndex(where: { $0.id == trip.id }) else { return }
         trips[idx] = trip

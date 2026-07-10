@@ -11,6 +11,7 @@ final class PlanTripViewModel {
     var alertOption: TripAlertOption = .none
 
     private(set) var shadeConditionText: String
+    private(set) var shadedSpotIDs: Set<String> = []
 
     let parkLocation: ParkLocation
 
@@ -43,14 +44,22 @@ final class PlanTripViewModel {
 
         guard let timelines = try? calculator.calculate(request: request) else {
             shadeConditionText = "Kondisi teduh tidak dapat dihitung untuk waktu ini."
+            shadedSpotIDs = []
             return
         }
+
+        shadedSpotIDs = Set(
+            timelines.compactMap { spot, timeline in
+                timeline.first?.isShaded == true ? spot.id : nil
+            }
+        )
 
         let shadedFlags = timelines.values.compactMap { $0.first?.isShaded }
         let total = shadedFlags.count
 
         guard total > 0 else {
             shadeConditionText = "Kondisi teduh tidak dapat dihitung untuk waktu ini."
+            shadedSpotIDs = []
             return
         }
 

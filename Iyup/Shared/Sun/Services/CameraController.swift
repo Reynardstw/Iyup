@@ -22,19 +22,16 @@ final class CameraController {
         self.anchor = anchor
     }
 
-    // ONE finger: rotate left-right only
     func rotate(dx: Float) {
         azimuth += dx * 0.002
         update()
     }
 
-    // TWO finger pinch: zoom
     func zoom(delta: Float) {
         distance = clampF(distance - delta, minDistance, maxDistance)
         update()
     }
 
-    // TWO finger drag: move ground
     func pan(dx: Float, dy: Float) {
         let s: Float = 0.004
         let forwardX = sin(azimuth)
@@ -61,7 +58,7 @@ final class CameraController {
         azimuth = atan2(diff.x, diff.z)
         update(animated: true)
     }
-    
+
     func focusPin(on point: SIMD3<Float>) {
         center = point
         center.x = clampF(center.x, panBoundsX.lowerBound, panBoundsX.upperBound)
@@ -69,9 +66,9 @@ final class CameraController {
 
         let pos = anchor.position(relativeTo: nil)
         let diff = pos - center
-        azimuth = atan2(diff.x, diff.z)   // arah putar ikut posisi sekarang
-        elevation = 0.6                   // paksa miring
-        distance = 3.5                    // paksa dekat
+        azimuth = atan2(diff.x, diff.z)
+        elevation = 0.6
+        distance = 3.5
         update(animated: true)
     }
 
@@ -82,9 +79,6 @@ final class CameraController {
         azimuth = 0.245
         update()
     }
-    
-    //            scene.moveCamera(to: [0.5, 7, 2], target: [0, -1.5, 0], duration: 1.0)
-
 
     func update(animated: Bool = false) {
         let x = center.x + distance * cos(elevation) * sin(azimuth)
@@ -106,12 +100,12 @@ final class CameraController {
     private func clampF(_ v: Float, _ lo: Float, _ hi: Float) -> Float {
         max(lo, min(hi, v))
     }
-    
+
     func tilt(dy: Float) {
         elevation = clampF(elevation + dy * 0.002, minElevation, maxElevation)
         update()
     }
-    
+
     func sync(position: SIMD3<Float>, target: SIMD3<Float>) {
         center = target
         let diff = position - target

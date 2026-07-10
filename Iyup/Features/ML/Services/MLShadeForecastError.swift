@@ -1,6 +1,5 @@
 import Foundation
 
-
 enum MLShadeForecastError: LocalizedError {
     case manifestNotFound
     case modelUnavailable(String)

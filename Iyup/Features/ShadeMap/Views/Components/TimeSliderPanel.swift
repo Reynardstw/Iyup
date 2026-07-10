@@ -1,9 +1,3 @@
-//  TimeSliderPanel.swift
-//  Iyup
-//
-//  Created by Albert Tandy Harison on 08/07/26.
-//
-
 import SwiftUI
 
 struct TimeSliderPanel: View {
@@ -19,8 +13,6 @@ struct TimeSliderPanel: View {
         blue: 236 / 255
     )
 
-    // MARK: - Current Time
-
     private var currentQuarterTime: Double {
         let calendar = Calendar.current
         let now = Date()
@@ -28,7 +20,6 @@ struct TimeSliderPanel: View {
         let h = calendar.component(.hour, from: now)
         let m = calendar.component(.minute, from: now)
 
-        // Round ke 15 menit terdekat
         let roundedMinute = ((m + 7) / 15) * 15
 
         var hourValue = h
@@ -48,17 +39,13 @@ struct TimeSliderPanel: View {
         abs(hour - currentQuarterTime) < 0.001
     }
 
-    // MARK: - Body
-
     var body: some View {
         VStack(spacing: 0) {
-
             Image(systemName: "sun.max.fill")
                 .font(.title3)
                 .padding(.bottom, 35)
 
             ZStack {
-
                 Slider(
                     value: $hour,
                     in: range,
@@ -114,8 +101,6 @@ struct TimeSliderPanel: View {
                 .font(.title3)
         }
     }
-
-    // MARK: - Helpers
 
     private func timeString(from value: Double) -> String {
         let hour = Int(value)

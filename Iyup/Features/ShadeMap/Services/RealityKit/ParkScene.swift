@@ -13,13 +13,12 @@ final class ParkScene {
     private let fillLight = DirectionalLight()
 
     private var targetWorld: SIMD3<Float> = .zero
-    
+
     private var glowingBalls: [ModelEntity] = []
     private var glowSubscription: Cancellable?
     private var glowStart = Date()
     private weak var realityScene: RealityKit.Scene?
-    
-    // ---------------------
+
     private var pinTemplate: Entity?
 
     private func loadPinTemplate() async {
@@ -37,16 +36,16 @@ final class ParkScene {
             print("gagal load pin:", error.localizedDescription)
         }
     }
-    
+
     private var cameraController: CameraController!
-    
+
     private var spotLookup: [String: ShadeSpot] = [:]
-    
+
     private let shadeService = ShadeSpotService()
     private var shadeMarkers: [Entity] = []
-    
+
     func tilt(dy: Float) { cameraController.tilt(dy: dy) }
-    
+
     func syncController(position: SIMD3<Float>, target: SIMD3<Float>) {
         cameraController.sync(position: position, target: target)
     }
@@ -54,7 +53,6 @@ final class ParkScene {
     func prepareShadeSpotsIfNeeded() {
         guard shadeMarkers.isEmpty else { return }
 
-//        let spots = shadeService.spots(forHour: hour)
         let spots = shadeService.spots()
         for spot in spots {
             let marker = makeMarker(spot: spot)
@@ -72,67 +70,22 @@ final class ParkScene {
         prepareShadeSpotsIfNeeded()
         shadeMarkers.forEach { $0.isEnabled = true }
     }
-    
-//    private func makeMarker(spot: ShadeSpot) -> Entity {
-//        let wrapper = Entity()
-//        let markerName = "shade_\(spot.id)" // Pindahkan nama ke variabel agar bisa dipakai bersama
-//        wrapper.name = markerName
-//
-//        if let template = pinTemplate {
-//            let pin = template.clone(recursive: true)
-//            pin.scale = [0.075, 0.075, 0.075]
-//            pin.position.y = -3
-//
-//            pin.forEachDescendant { entity in
-//                guard var model = entity.components[ModelComponent.self] else { return }
-//                model.materials = model.materials.map { mat -> RealityKit.Material in
-//                    if let pbr = mat as? PhysicallyBasedMaterial {
-//                        return UnlitMaterial(color: pbr.baseColor.tint)
-//                    }
-//                    if let simple = mat as? SimpleMaterial {
-//                        return UnlitMaterial(color: simple.color.tint)
-//                    }
-//                    return mat
-//                }
-//                entity.components.set(model)
-//            }
-//
-//            wrapper.addChild(pin)
-//        }
-//
-//        // --- PERBAIKAN DI SINI ---
-//        let collisionEntity = Entity()
-//        collisionEntity.name = markerName // ← SOLUSI: Berikan nama yang sama dengan wrapper
-//        
-//        let shape = ShapeResource.generateSphere(radius: 2.0)
-//        collisionEntity.components.set(CollisionComponent(shapes: [shape]))
-//        collisionEntity.components.set(InputTargetComponent())
-//        
-//        collisionEntity.position.y = -3
-//        
-//        wrapper.addChild(collisionEntity)
-//        // -------------------------
-//
-//        return wrapper
-//    }
-    
+
     private func makeMarker(spot: ShadeSpot) -> Entity {
         let wrapper = Entity()
         let markerName = "shade_\(spot.id)"
-        wrapper.name = markerName // Nama wrapper tetap untuk manajemen internal
+        wrapper.name = markerName
 
         let purple = UIColor(red: 153/255, green: 69/255, blue: 236/255, alpha: 1)
 
-        // 1. Batang (silinder tipis)
         let stemMesh = MeshResource.generateCylinder(height: 1.2, radius: 0.08)
         var stemMat = PhysicallyBasedMaterial()
         stemMat.baseColor = .init(tint: purple)
         stemMat.roughness = 0.6
         let stem = ModelEntity(mesh: stemMesh, materials: [stemMat])
-        stem.position.y = 0.6   // setengah tinggi, biar bawah nancap di y=0
+        stem.position.y = 0.6
         wrapper.addChild(stem)
 
-        // 2. Bola di atas batang
         let ballMesh = MeshResource.generateSphere(radius: 0.35)
         var ballMat = PhysicallyBasedMaterial()
         ballMat.baseColor = .init(tint: purple)
@@ -140,48 +93,43 @@ final class ParkScene {
         ballMat.emissiveColor = .init(color: purple)
         ballMat.emissiveIntensity = 0
         let ball = ModelEntity(mesh: ballMesh, materials: [ballMat])
-        ball.position.y = 1.4   // di ujung atas batang
-        
+        ball.position.y = 1.4
+
         let shadowComponent = DynamicLightShadowComponent(castsShadow: false)
 
-        // TERAPKAN KE ANAK-ANAKNYA LANGSUNG:
         stem.components.set(shadowComponent)
         ball.components.set(shadowComponent)
-        
-        // SOLUSI 1: Berikan nama markerName ke ball, karena ball yang memegang CollisionComponent!
+
         ball.name = markerName
         wrapper.addChild(ball)
 
-        // Skala keseluruhan pin
         wrapper.scale = [3, 3, 3]
 
-        // SOLUSI 2: Kembalikan offset Y ke -3 (atau sesuaikan nilainya) agar sejajar permukaan tanah
         wrapper.position.y = -3.5
 
-        // Collision buat tap (ditempel di ball)
         let shape = ShapeResource.generateSphere(radius: 0.35 * 1.5)
         ball.components.set(CollisionComponent(shapes: [shape]))
         ball.components.set(InputTargetComponent())
 
         return wrapper
     }
-    
+
     func spotForEntity(_ name: String) -> ShadeSpot? {
         spotLookup[name]
     }
-    
+
     func worldPositionForEntity(_ name: String) -> SIMD3<Float>? {
         guard let marker = shadeMarkers.first(where: { $0.name == name }) else { return nil }
         return marker.position(relativeTo: nil)
     }
-    
+
     func rotate(dx: Float) { cameraController.rotate(dx: dx) }
     func zoom(delta: Float) { cameraController.zoom(delta: delta) }
     func pan(dx: Float, dy: Float) { cameraController.pan(dx: dx, dy: dy) }
     func focusOn(_ p: SIMD3<Float>) { cameraController.focus(on: p) }
     func resetCamera() { cameraController.reset() }
     func focusPin(_ p: SIMD3<Float>) { cameraController.focusPin(on: p) }
-    
+
     func startGlowLoop(scene: RealityKit.Scene) {
         realityScene = scene
         glowStart = Date()
@@ -189,44 +137,41 @@ final class ParkScene {
         glowSubscription = scene.subscribe(to: SceneEvents.Update.self) { [weak self] _ in
             guard let self else { return }
             let t = Date().timeIntervalSince(self.glowStart)
-            // gelombang sinus 0..1, periode ~1.3 detik
+
             let wave = (sin(t * 2 * .pi / 1.3) + 1) / 2
-            let intensity = Float(0.2 + wave * 2.5)   // redup 0.2 → terang 2.5
-            let scale = Float(1.0 + wave * 0.4)          // ← TAMBAH: hitung skala
+            let intensity = Float(0.2 + wave * 2.5)
+            let scale = Float(1.0 + wave * 0.4)
 
             for ball in self.glowingBalls {
                 if var mat = ball.model?.materials.first as? PhysicallyBasedMaterial {
                     mat.emissiveIntensity = intensity
                     ball.model?.materials[0] = mat
                 }
-                ball.scale = [scale, scale, scale]        // ← TAMBAH: terapkan skala
+                ball.scale = [scale, scale, scale]
             }
         }
     }
-    
+
     func hideShadeSpots() {
         shadeMarkers.forEach { $0.isEnabled = false }
         glowingBalls.removeAll()
     }
 
-    /// Pause loop glow (hemat CPU/GPU saat scene ini ketutup, mis. Plan Trip di atas ShadeMap).
     func pauseGlowLoop() {
         glowSubscription?.cancel()
         glowSubscription = nil
     }
 
-    /// Resume loop glow pakai scene yang tersimpan.
     func resumeGlowLoop() {
         if let scene = realityScene {
             startGlowLoop(scene: scene)
         }
     }
-    
+
     func updateGlow(safeSpotIDs: Set<String>) {
         glowingBalls.removeAll()
 
         for marker in shadeMarkers {
-            // PERBAIKAN: Cari ball di dalam anak (children) marker yang memiliki nama sama dengan marker-nya
             guard let spot = spotLookup[marker.name],
                   let ball = marker.children.first(where: { $0.name == marker.name }) as? ModelEntity else {
                 continue
@@ -243,16 +188,6 @@ final class ParkScene {
             }
         }
     }
-    
-//    func resetCamera() {
-//        cameraController.azimuth = 0
-//        cameraController.elevation = 0.9
-//        cameraController.distance = 5.5
-//        cameraController.center = [0, 0, 0]
-//        cameraController.update()
-//    }
-    
-    // ----------------
 
     private let sunPositionService = OfficialSunKitSunPositionService()
     private let sunVectorConverter = SunVectorConverter(
@@ -262,26 +197,24 @@ final class ParkScene {
         let cam = PerspectiveCamera()
         cam.camera.fieldOfViewInDegrees = 60
         cameraAnchor.addChild(cam)
-        cameraAnchor.position = [3,6, 3.5]
+        cameraAnchor.position = [3, 6, 3.5]
         cameraAnchor.look(at: [-0.5, -0.75, 0], from: cameraAnchor.position, relativeTo: nil)
         container.addChild(cameraAnchor)
         cameraController = CameraController(anchor: cameraAnchor)
     }
-    
+
     func moveCamera(to position: SIMD3<Float>, target: SIMD3<Float>, duration: TimeInterval = 0.8) {
         let temp = Entity()
         temp.position = position
         temp.look(at: target, from: position, relativeTo: nil)
         cameraAnchor.move(to: temp.transform, relativeTo: nil, duration: duration)
     }
-    
+
     private var didBuild = false
 
-    /// Cache asset park.usdz (shared antar semua ParkScene). Decode disk sekali saja.
     private static var cachedPark: Entity?
 
     func build() async -> Entity {
-        
         if didBuild { return container }
         didBuild = true
         container.addChild(worldRoot)
@@ -295,13 +228,11 @@ final class ParkScene {
             extensionName: "usdz",
             subdirectories: [nil, "Resources/RealityKit"]
         ) else {
-            print("checkpoint_final_4.usda tidak ditemukan di bundle")
+            print("park.usdz tidak ditemukan di bundle")
             return container
         }
 
         do {
-            // Asset cache: decode park.usdz dari disk HANYA sekali seumur app.
-            // Instance berikutnya cukup clone (murah) → hilangkan reload pas transisi.
             let park: Entity
             if let cached = Self.cachedPark {
                 park = cached.clone(recursive: true)
@@ -312,18 +243,16 @@ final class ParkScene {
             }
             worldRoot.addChild(park)
             normalizeParkScale(park)
-            await loadPinTemplate()   // ← taruh di sini
+            await loadPinTemplate()
 
         } catch {
-            print("Gagal load checkpoint_final_4.usda: \(error.localizedDescription)")
+            print("Gagal load park.usdz: \(error.localizedDescription)")
         }
-        
 
-        
         return container
     }
+
     func setSun(
-//        hour: Int,
         hour: Double,
         location: ParkLocation
     ) {
@@ -358,7 +287,6 @@ final class ParkScene {
     }
 
     func sunPosition(
-//        hour: Int,
         hour: Double,
         location: ParkLocation
     ) -> SunPosition {
@@ -431,21 +359,7 @@ final class ParkScene {
         return nil
     }
 
-//    static func jakartaDate(hour: Int) -> Date {
     static func jakartaDate(hour: Double) -> Date {
-//        var calendar = Calendar(identifier: .gregorian)
-//        calendar.timeZone = TimeZone(identifier: "Asia/Jakarta") ?? .current
-//
-//        var components = DateComponents()
-//        components.timeZone = TimeZone(identifier: "Asia/Jakarta")
-//        components.year = 2026
-//        components.month = 3
-//        components.day = 7
-//        components.hour = hour
-//        components.minute = 0
-//        components.second = 0
-        
-        
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Jakarta") ?? .current
 

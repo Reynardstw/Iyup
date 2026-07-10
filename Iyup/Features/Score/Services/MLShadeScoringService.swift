@@ -1,6 +1,5 @@
 import Foundation
 
-
 struct MLShadeScoringService: Sendable {
     struct Weights: Sendable {
         let shadowForecast: Double

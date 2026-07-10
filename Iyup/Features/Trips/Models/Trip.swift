@@ -1,6 +1,5 @@
 import Foundation
 
-/// Satu rencana kunjungan yang disimpan user dari PlanTripView.
 struct Trip: Identifiable, Codable, Hashable {
     let id: UUID
     var parkName: String
@@ -8,7 +7,7 @@ struct Trip: Identifiable, Codable, Hashable {
     var address: String
     var latitude: Double
     var longitude: Double
-    var date: Date                     // tanggal + jam yang dipilih
+    var date: Date
     var recommendedShadeWindow: String
     var alertOption: TripAlertOption
     var shadeConditionText: String

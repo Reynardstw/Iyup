@@ -132,6 +132,7 @@ struct PlanTripView: View {
             Text("Plan Your Trip")
                 .font(.headline)
                 .lineLimit(1)
+                .font(.system(size: 20))
 
             Spacer()
 

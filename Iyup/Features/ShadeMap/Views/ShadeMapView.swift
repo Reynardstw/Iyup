@@ -7,6 +7,8 @@ struct ShadeMapView: View {
     /// supaya tab bar bisa disembunyikan.
     var onDetailActiveChange: (Bool) -> Void = { _ in }
 
+    var onTripSavedNavigateToTrips: () -> Void = {}
+    
     @State private var viewModel = ShadeMapViewModel()
 
     // Gesture state tetap di View agar update 60fps tidak membebani ViewModel.
@@ -257,8 +259,9 @@ extension ShadeMapView {
                 onSelectedDateChange: { newDate in
                     viewModel.applyPlanTripDate(newDate)
                 },
-                onSaveTrip: { trip in
-                    viewModel.openSavedTripInEditView(trip)
+                onSaveTrip: { _ in
+                    viewModel.closeDetail()
+                    onTripSavedNavigateToTrips()
                 }
             )
             .transition(.move(edge: .trailing).combined(with: .opacity))

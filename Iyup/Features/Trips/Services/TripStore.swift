@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 /// Penyimpanan trip berbasis UserDefaults (JSON). Reactive lewat @Observable:
 /// TripsView otomatis refresh saat `trips` berubah.

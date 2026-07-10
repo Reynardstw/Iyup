@@ -89,11 +89,7 @@ struct ParkDetailSheetContent: View {
         HStack(spacing: 0) {
             infoGlassSegment(title: "Entrance", value: info.entrance, color: .primary)
 
-            infoGlassDivider
-
             infoGlassSegment(title: "Hours", value: info.hoursLabel, color: info.isOpen ? .green : .red)
-
-            infoGlassDivider
 
             infoGlassSegment(title: "Distance", value: "\(info.distanceKm) km", color: .primary)
         }

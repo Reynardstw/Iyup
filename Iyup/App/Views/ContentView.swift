@@ -6,7 +6,7 @@ private enum RootTab: Hashable {
     case search
 }
 
-struct RootTabView: View {
+struct ContentView: View {
     @State private var selectedTab: RootTab = .parks
 
     private let brandPurple = Color(red: 153/255, green: 69/255, blue: 236/255)
@@ -47,5 +47,5 @@ private struct SearchPlaceholderView: View {
 }
 
 #Preview {
-    RootTabView()
+    ContentView()
 }

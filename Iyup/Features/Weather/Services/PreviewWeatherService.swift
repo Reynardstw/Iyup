@@ -9,7 +9,7 @@ struct PreviewWeatherService: WeatherProviding {
             temperatureCelsius: 31.0,
             apparentTemperatureCelsius: 34.2,
             dewPointCelsius: 24.1,
-            condition: "Berawan Sebagian",
+            condition: "Cloudy",
             symbolName: "cloud.sun.fill",
             isDaylight: true,
             humidity: 0.68,
@@ -55,7 +55,7 @@ struct PreviewWeatherService: WeatherProviding {
                 hour: hour,
                 temperatureCelsius: 26.0 + 8.0 * peakFactor,
                 humidity: 0.75 - 0.20 * peakFactor,
-                condition: peakFactor > 0.6 ? "Cerah" : "Berawan Sebagian",
+                condition: peakFactor > 0.6 ? "Sunny" : "Cloudy",
                 symbolName: peakFactor > 0.6 ? "sun.max.fill" : "cloud.sun.fill"
             )
         }

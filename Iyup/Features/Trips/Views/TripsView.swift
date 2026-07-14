@@ -72,7 +72,7 @@ struct TripsView: View {
     }
 
     private func deleteTrips(at offsets: IndexSet) {
-        offsets.map { store.trips[$0] }.forEach(TripNotificationScheduler.cancel)
+        offsets.map { store.trips[$0] }.forEach{TripNotificationScheduler.cancel(for: $0)}
         store.delete(at: offsets)
     }
 }

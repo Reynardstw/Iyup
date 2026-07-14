@@ -117,7 +117,6 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         var manifests: [ModelKey: ModelManifest] = [:]
         for key in ModelKey.allCases {
             manifests[key] = try Self.loadManifest(for: key, bundle: bundle)
-            let featureCount = manifests[key]?.features_ordered.count ?? 0
         }
 
         guard let firstMapping = manifests.values.first?.spot_mapping else {
@@ -141,8 +140,6 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
             )
         }
         self.loadedModels = models
-
-        let loadedNames = models.keys.map { $0.modelName }.sorted().joined(separator: ", ")
     }
 
     func forecast(
@@ -276,11 +273,6 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
                 throw MLShadeForecastError.missingFeature(featureName, model: key.rawValue)
             }
             dictionary[featureName] = MLFeatureValue(double: value)
-        }
-
-        for featureName in loaded.features {
-            if let featureValue = dictionary[featureName] {
-            }
         }
 
         let provider = try MLDictionaryFeatureProvider(dictionary: dictionary)
@@ -417,7 +409,7 @@ final class MLShadeCoreMLForecastService: MLShadeEnvironmentForecastProviding, @
         return value
     }
 
-    private static func defaultSensorFeatureProvider(
+   nonisolated private static func defaultSensorFeatureProvider(
         spot: ParkSpot,
         modelName: String,
         sampleDate: Date

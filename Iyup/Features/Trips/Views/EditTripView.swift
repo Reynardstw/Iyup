@@ -14,7 +14,7 @@ struct EditTripView: View {
     @State private var showPlanTrip = false
     @State private var planTripViewModel = AppComposition.makePlanTripViewModel()
 
-    private let pageBackground = Color(red: 245/255, green: 247/255, blue: 250/255)
+    private let pageBackground = Color(red: 0.92, green: 0.94, blue: 1.00)
 
     init(trip: Trip) {
         self.trip = trip
@@ -238,7 +238,7 @@ struct EditTripView: View {
                 date: Date().addingTimeInterval(5 * 60 * 60),
                 recommendedShadeWindow: "16.00 - 18.00",
                 alertOption: .thirtyMinutesBefore,
-                shadeConditionText: "Sebagian besar area taman teduh pada waktu ini."
+                shadeConditionText: "Most of the park is shaded at this time."
             )
         )
     }

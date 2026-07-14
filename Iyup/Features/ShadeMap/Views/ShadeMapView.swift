@@ -4,17 +4,17 @@ import UIKit
 
 struct ShadeMapView: View {
     var onDetailActiveChange: (Bool) -> Void = { _ in }
-
+    
     var onTripSavedNavigateToTrips: () -> Void = {}
-
+    
     @State private var viewModel = ShadeMapViewModel()
-
+    
     @State private var lastDrag: CGSize = .zero
     @State private var lastMag: CGFloat = 1
     @State private var lastPan: CGSize = .zero
     @State private var lastRotation: Double = 0
     @State private var restoreSheetAfterCalendar = false
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -86,19 +86,19 @@ extension ShadeMapView {
         .opacity(0.001)
         .allowsHitTesting(false)
     }
-
+    
     private func openNativeCalendarPopover() {
         if viewModel.showCalendar {
             viewModel.showCalendar = false
             return
         }
-
+        
         restoreSheetAfterCalendar = viewModel.showDetail
-            && viewModel.showSheet
-            && !viewModel.showPlanTrip
-
+        && viewModel.showSheet
+        && !viewModel.showPlanTrip
+        
         viewModel.showSheet = false
-
+        
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(160))
             guard viewModel.showDetail, !viewModel.showPlanTrip else {
@@ -108,21 +108,21 @@ extension ShadeMapView {
             viewModel.showCalendar = true
         }
     }
-
+    
     private func restoreNativeSheetAfterCalendarIfNeeded() {
         guard restoreSheetAfterCalendar else { return }
         guard viewModel.showDetail, !viewModel.showPlanTrip else {
             restoreSheetAfterCalendar = false
             return
         }
-
+        
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(0))
             viewModel.showSheet = true
             restoreSheetAfterCalendar = false
         }
     }
-
+    
     private var backgroundLayer: some View {
         ZStack {
             LinearGradient(
@@ -133,7 +133,7 @@ extension ShadeMapView {
                 startPoint: .top,
                 endPoint: .bottom
             )
-
+            
             RadialGradient(
                 gradient: Gradient(colors: [
                     Color(red: 253/255, green: 224/255, blue: 120/255).opacity(0.9),
@@ -148,35 +148,42 @@ extension ShadeMapView {
         }
         .ignoresSafeArea()
     }
-
+    
     private var lockPlaceholderLayer: some View {
         ZStack {
+            // Gambar background (Map)
             Image("tebet_silhouette_smooth")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxWidth: 220)
-                                    .rotationEffect(.degrees(30))
-                                    .opacity(0.8)
-
-            Image(systemName: "lock")
-                .font(.system(size: 100, weight: .light))
-                .foregroundColor(.gray)
-        }
-        .opacity(viewModel.currentPark.isMapped ? 0 : 1)
-        .allowsHitTesting(!viewModel.currentPark.isMapped)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 220)
+                .rotationEffect(.degrees(30))
+                .opacity(0.8)
+            
+            // VStack untuk menyusun gembok dan teks dari atas ke bawah
+            VStack(spacing: 8) { // Angka spacing mengatur jarak antara gembok dan teks
+                Image(systemName: "lock")
+                    .font(.system(size: 50, weight: .light)) // Ukuran diperkecil (sebelumnya 100)
+                    .foregroundColor(.gray)
+                
+                Text("Coming Soon")
+                    .font(.headline) // Bisa diganti .subheadline atau ukuran lain sesuai selera
+                    .foregroundColor(.gray)
+            }
+        }       .opacity(viewModel.currentPark.isMapped ? 0 : 1)
+            .allowsHitTesting(!viewModel.currentPark.isMapped)
     }
-
+    
     private var realityMapLayer: some View {
         RealityView { content in
             let root = await viewModel.scene.build()
-
+            
             content.add(root)
             viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
-
+            
             if let realScene = root.scene {
                 viewModel.scene.startGlowLoop(scene: realScene)
             }
-
+            
             viewModel.shadeMapReady = true
         } update: { _ in
             viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
@@ -238,7 +245,7 @@ extension ShadeMapView {
         .simultaneousGesture((viewModel.showDetail && !viewModel.showPlanTrip) ? zoomGesture : nil)
         .opacity(viewModel.currentPark.isMapped ? 1 : 0)
     }
-
+    
     private var controlUILayer: some View {
         ZStack {
             if !viewModel.showPlanTrip {
@@ -248,21 +255,21 @@ extension ShadeMapView {
                     } else {
                         mapHeader
                     }
-
+                    
                     Spacer()
-
+                    
                     if !viewModel.showDetail {
                         carouselChevrons
                     }
-
+                    
                     Spacer()
-
+                    
                     if !viewModel.showDetail {
                         mapFooter
                     }
                 }
             }
-
+            
             if viewModel.showDetail && !viewModel.showPlanTrip {
                 HStack {
                     Spacer()
@@ -276,7 +283,7 @@ extension ShadeMapView {
             }
         }
     }
-
+    
     @ViewBuilder
     private var planTripLayer: some View {
         if viewModel.showPlanTrip {
@@ -299,7 +306,7 @@ extension ShadeMapView {
                     onTripSavedNavigateToTrips()
                 }
             )           .transition(.move(edge: .trailing).combined(with: .opacity))
-            .zIndex(10)
+                .zIndex(10)
         }
     }
 }
@@ -320,7 +327,7 @@ extension ShadeMapView {
                         withAnimation { viewModel.selectedSpot = nil }
                     }
                 )
-
+            
             if let selectedSpot = viewModel.selectedSpot,
                let scored = viewModel.scoreViewModel.scoredResults.first(where: { $0.spot.id == selectedSpot.spotID }) {
                 ShadeCard(scored: scored)
@@ -331,7 +338,7 @@ extension ShadeMapView {
             }
         }
     }
-
+    
     private var carouselChevrons: some View {
         HStack {
             Image(systemName: "chevron.left")
@@ -342,9 +349,9 @@ extension ShadeMapView {
                 .onTapGesture {
                     withAnimation(.snappy) { viewModel.previousPark() }
                 }
-
+            
             Spacer()
-
+            
             Image(systemName: "chevron.right")
                 .foregroundColor(.black)
                 .font(.system(size: 28, weight: .medium))
@@ -356,16 +363,16 @@ extension ShadeMapView {
         }
         .padding(.horizontal, 20)
     }
-
+    
     private var mapHeader: some View {
         VStack(spacing: 0) {
             Text(viewModel.currentPark.name)
                 .font(.system(size: 32, weight: .bold))
-
+            
             Text(viewModel.currentPark.description)
                 .font(.system(size: 16, weight: .medium))
                 .padding(.bottom, 4)
-
+            
             HStack {
                 Image(systemName: "location.fill")
                 Text(viewModel.currentPark.distanceInfo)
@@ -375,7 +382,7 @@ extension ShadeMapView {
         }
         .padding(.top, 60)
     }
-
+    
     private var detailTopBar: some View {
         HStack {
             Button {
@@ -388,9 +395,9 @@ extension ShadeMapView {
                     .padding(12)
                     .glassEffect(in: .circle)
             }
-
+            
             Spacer()
-
+            
             Button {
                 openNativeCalendarPopover()
             } label: {
@@ -419,9 +426,9 @@ extension ShadeMapView {
                 .frame(width: 280, height: 250)
                 .presentationCompactAdaptation(.popover)
             }
-
+            
             Spacer()
-
+            
             Image(systemName: "chevron.left")
                 .font(.title)
                 .padding(12)
@@ -429,7 +436,7 @@ extension ShadeMapView {
         }
         .padding(.horizontal, 16)
     }
-
+    
     private var mapFooter: some View {
         Button("View Details") {
             viewModel.handleViewDetails()
@@ -440,17 +447,17 @@ extension ShadeMapView {
         .controlSize(.large)
         .padding(.bottom, 30)
     }
-
+    
     struct WeatherBadge: View {
         let temperatureCelsius: Int
         let symbolName: String
-
+        
         var body: some View {
             HStack(spacing: 6) {
                 Image(systemName: symbolName)
                     .font(.system(size: 15, weight: .semibold))
                     .symbolRenderingMode(.multicolor)
-
+                
                 Text("\(temperatureCelsius)°")
                     .font(.system(size: 16, weight: .semibold))
             }
@@ -469,7 +476,7 @@ extension ShadeMapView {
         SpatialTapGesture()
             .targetedToAnyEntity()
             .onEnded { value in
-
+                
                 if let spot = viewModel.scene.spotForEntity(value.entity.name) {
                     withAnimation(.spring(duration: 0.3)) {
                         viewModel.selectedSpot = spot
@@ -482,7 +489,7 @@ extension ShadeMapView {
                 }
             }
     }
-
+    
     private var panGesture: some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
@@ -495,7 +502,7 @@ extension ShadeMapView {
                 lastDrag = .zero
             }
     }
-
+    
     private var rotateGesture: some Gesture {
         RotateGesture()
             .onChanged { value in
@@ -507,7 +514,7 @@ extension ShadeMapView {
                 lastRotation = 0
             }
     }
-
+    
     private var zoomGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in

@@ -23,13 +23,13 @@ struct MLShadeScoredSpotResult: Identifiable, Equatable, Sendable {
     var occupancyLabel: String {
         switch meanPredictedOccupancy {
         case ..<0.31:
-            return "Sepi"
+            return "Not Crowded"
         case ..<0.61:
-            return "Sedang"
+            return "Slightly Crowded"
         case ..<0.86:
-            return "Ramai"
+            return "Crowded"
         default:
-            return "Penuh"
+            return "Very Crowded"
         }
     }
 }

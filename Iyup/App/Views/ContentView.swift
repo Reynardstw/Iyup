@@ -39,7 +39,7 @@ private struct SearchPlaceholderView: View {
             ContentUnavailableView(
                 "Search",
                 systemImage: "magnifyingglass",
-                description: Text("Cari taman di sini.")
+                description: Text("Search your park here.")
             )
             .navigationTitle("Search")
         }

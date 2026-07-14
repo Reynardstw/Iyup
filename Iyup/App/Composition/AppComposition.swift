@@ -72,7 +72,8 @@ enum AppComposition {
         return calendar
     }
 
-    static func makeParkDetailViewModel(place: NearbyPlace = .tamanBenderaPusaka) -> ParkDetailViewModel {
+    static func makeParkDetailViewModel(place: NearbyPlace? = nil) -> ParkDetailViewModel {
+        let place = place ?? .tamanBenderaPusaka
         let location = ParkGeometryCatalog.tamanBenderaPusakaLocation
         let spots = ParkGeometryCatalog.benchSpots
         let treeOccluders = ParkGeometryCatalog.treeOccluders

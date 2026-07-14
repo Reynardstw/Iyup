@@ -148,6 +148,7 @@ class ShadeMapViewModel {
         showDetail = false
         showSheet = false
         showPlanTrip = false
+        sheetDetent = peekDetent    
     }
 
     func openPlanTripFromSheet() {

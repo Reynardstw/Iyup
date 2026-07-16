@@ -67,7 +67,7 @@ struct EditTripView: View {
             trailingTitle: "Edit",
             onTrailing: { showPlanTrip = true }
         )
-        .navigationDestination(isPresented: $showPlanTrip) {
+        .sheet(isPresented: $showPlanTrip) {
             PlanTripView(
                 parkName: currentTrip.parkName,
                 recommendedShadeWindow: currentTrip.recommendedShadeWindow,

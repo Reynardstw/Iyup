@@ -26,7 +26,6 @@ struct ShadeMapView: View {
                 lockPlaceholderLayer
                 realityMapLayer
                 controlUILayer
-                planTripLayer
             }
             .onDisappear {
                 viewModel.selectedSpot = nil
@@ -69,6 +68,24 @@ struct ShadeMapView: View {
                 .presentationBackgroundInteraction(.enabled(upThrough: viewModel.midDetent))
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled()
+                .sheet(isPresented: $viewModel.showPlanTrip) {
+                    PlanTripView(
+                        parkName: viewModel.parkDetailViewModel.info.name,
+                        recommendedShadeWindow: viewModel.parkDetailViewModel.info.recommendedShadeWindow,
+                        selectedDate: $viewModel.selectedDate,
+                        viewModel: viewModel.planTripViewModel,
+                        city: viewModel.parkDetailViewModel.info.city,
+                        address: viewModel.parkDetailViewModel.info.address,
+                        onSelectedDateChange: { newDate in
+                            viewModel.applyPlanTripDate(newDate)
+                        },
+                        onSaveTrip: { _ in
+                            viewModel.closePlanTrip()
+                            viewModel.closeDetail()
+                            onTripSavedNavigateToTrips()
+                        }
+                    )
+                }
             }
             .task {
                 await viewModel.loadParkDetail()
@@ -77,7 +94,7 @@ struct ShadeMapView: View {
                 EditTripView(trip: trip)
             }
             .toolbar {
-                if viewModel.showDetail && !viewModel.showPlanTrip {
+                if viewModel.showDetail {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {
                             withAnimation { viewModel.selectedSpot = nil }
@@ -116,7 +133,7 @@ struct ShadeMapView: View {
                 }
             }
             .toolbarVisibility(
-                viewModel.showDetail && !viewModel.showPlanTrip ? .visible : .hidden,
+                viewModel.showDetail ? .visible : .hidden,
                 for: .navigationBar
             )
         }
@@ -262,7 +279,7 @@ extension ShadeMapView {
         .animation(.spring(response: 0.48, dampingFraction: 0.86), value: viewModel.mapDisplayMode)
         .zIndex(viewModel.mapDisplayMode.isPlanTripMini ? 20 : 0)
         .overlay(alignment: .bottomLeading) {
-            if viewModel.showDetail && !viewModel.showPlanTrip {
+            if viewModel.showDetail {
                 WeatherBadge(
                     temperatureCelsius: viewModel.parkDetailViewModel.info.temperatureCelsius,
                     symbolName: viewModel.parkDetailViewModel.info.weatherSymbolName
@@ -273,7 +290,7 @@ extension ShadeMapView {
             }
         }
         .overlay {
-            if viewModel.showDetail && !viewModel.showPlanTrip {
+            if viewModel.showDetail {
                 TwoFingerPan(
                     onPan: { translation in
                         withAnimation { viewModel.selectedSpot = nil }
@@ -321,7 +338,7 @@ extension ShadeMapView {
                 }
             }
             
-            if viewModel.showDetail && !viewModel.showPlanTrip {
+            if viewModel.showDetail {
                 HStack {
                     Spacer()
                     TimeSliderPanel(hour: $viewModel.hour)
@@ -338,33 +355,6 @@ extension ShadeMapView {
 }
 
 extension ShadeMapView {
-    @ViewBuilder
-    private var planTripLayer: some View {
-        if viewModel.showPlanTrip {
-            PlanTripView(
-                parkName: viewModel.parkDetailViewModel.info.name,
-                recommendedShadeWindow: viewModel.parkDetailViewModel.info.recommendedShadeWindow,
-                selectedDate: $viewModel.selectedDate,
-                viewModel: viewModel.planTripViewModel,
-                city: viewModel.parkDetailViewModel.info.city,
-                address: viewModel.parkDetailViewModel.info.address,
-                mapTopSpacing: viewModel.planTripMapReservedHeight,
-                onClose: {
-                    viewModel.closePlanTrip()
-                },
-                onSelectedDateChange: { newDate in
-                    viewModel.applyPlanTripDate(newDate)
-                },
-                onSaveTrip: { _ in
-                    viewModel.closeDetail()
-                    onTripSavedNavigateToTrips()
-                }
-            )
-            .transition(.move(edge: .trailing).combined(with: .opacity))
-            .zIndex(10)
-        }
-    }
-
     @ViewBuilder
     private func cardPopupOverlay(at location: CGPoint) -> some View {
         ZStack {

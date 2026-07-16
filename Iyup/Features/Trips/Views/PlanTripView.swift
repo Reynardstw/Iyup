@@ -11,7 +11,6 @@ struct PlanTripView: View {
     let city: String
     let address: String
 
-    private let mapTopSpacing: CGFloat
 
     private let editingTrip: Trip?
 
@@ -28,7 +27,6 @@ struct PlanTripView: View {
         viewModel: PlanTripViewModel,
         city: String = "",
         address: String = "",
-        mapTopSpacing: CGFloat = 0,
         editingTrip: Trip? = nil,
         onClose: (() -> Void)? = nil,
         onSelectedDateChange: @escaping (Date) -> Void = { _ in },
@@ -38,7 +36,6 @@ struct PlanTripView: View {
         self.recommendedShadeWindow = recommendedShadeWindow
         self.city = city
         self.address = address
-        self.mapTopSpacing = mapTopSpacing
         self.editingTrip = editingTrip
         self.onClose = onClose
         self.onSelectedDateChange = onSelectedDateChange
@@ -48,6 +45,12 @@ struct PlanTripView: View {
     }
 
     var body: some View {
+        NavigationStack {
+            planTripContent
+        }
+    }
+
+    private var planTripContent: some View {
         ZStack(alignment: .top) {
             pageBackground
                 .ignoresSafeArea()
@@ -58,7 +61,7 @@ struct PlanTripView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
-                    .padding(.top, 80)
+                    .padding(.top, 16)
 
                 mapPreviewWindow
 
@@ -82,8 +85,6 @@ struct PlanTripView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 18)
-
-            topBar
         }
         .onAppear {
             viewModel.selectedDate = selectedDate
@@ -96,53 +97,26 @@ struct PlanTripView: View {
             viewModel.selectedDate = newValue
             onSelectedDateChange(newValue)
         }
-        .toolbar(.hidden, for: .navigationBar)
-    }
-
-    /// Custom header: this screen is a HUD overlay above the live map,
-    /// outside any navigation context, so the system navigation bar cannot
-    /// appear here. Patched for accessibility and Dynamic Type.
-    private var topBar: some View {
-        ZStack {
-            Text(editingTrip == nil ? "Plan Your Trip" : "Edit Trip")
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-
-            HStack {
-                Button {
+        .navigationTitle(editingTrip == nil ? "Plan Your Trip" : "Edit Trip")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
                     close()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.title2.weight(.semibold))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Circle())
-                        .glassEffect(.regular.interactive(), in: .circle)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Back")
+            }
 
-                Spacer()
-
-                Button {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
                     let trip = saveTrip()
                     if let onSaveTrip {
                         onSaveTrip(trip)
                     } else {
                         close()
                     }
-                } label: {
-                    Text("Save")
-                        .font(.body.weight(.semibold))
-                        .frame(height: 44)
-                        .padding(.horizontal, 18)
-                        .contentShape(Capsule())
-                        .glassEffect(.regular.interactive(), in: .capsule)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.tint)
             }
         }
-        .padding(.horizontal, 16)
     }
 
     private func close() {
@@ -179,25 +153,16 @@ struct PlanTripView: View {
         return trip
     }
 
-    @ViewBuilder
     private var mapPreviewWindow: some View {
-        if mapTopSpacing > 0 {
-            Color.clear
-                .frame(maxWidth: .infinity)
-                .frame(height: mapTopSpacing)
-                .padding(.horizontal, 8)
-                .accessibilityHidden(true)
-        } else {
-            StandalonePark3DPreview(
-                location: previewParkLocation,
-                hour: selectedHour,
-                highlightedSpotIDs: viewModel.shadedSpotIDs
-            )
-            .frame(maxWidth: .infinity)
-            .frame(height: 132)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .padding(.horizontal, 8)
-        }
+        StandalonePark3DPreview(
+            location: previewParkLocation,
+            hour: selectedHour,
+            highlightedSpotIDs: viewModel.shadedSpotIDs
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: 132)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.horizontal, 8)
     }
 
     private var previewParkLocation: ParkLocation {
@@ -302,6 +267,5 @@ struct PlanTripView: View {
         recommendedShadeWindow: "16.00 - 18.00",
         selectedDate: .constant(Date()),
         viewModel: AppComposition.makePlanTripViewModel(),
-        mapTopSpacing: 150
     )
 }

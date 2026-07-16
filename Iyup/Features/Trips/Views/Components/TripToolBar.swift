@@ -9,9 +9,7 @@ struct TripHeaderBar: View {
     let onBack: () -> Void
     let onTrailing: () -> Void
 
-    private let brandPurple = Color(red: 153/255, green: 69/255, blue: 236/255)
-
-    var body: some View {
+    var body: some View {   
         ZStack {
             Text(title)
                 .font(.system(size: 20, weight: .semibold))
@@ -39,7 +37,7 @@ struct TripHeaderBar: View {
                         .frame(height: 48)
                         .background {
                             if trailingProminent {
-                                Capsule().fill(brandPurple)
+                                Capsule().fill(Color.accentColor)
                             }
                         }
                         .glassEffect(in: .capsule)

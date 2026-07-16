@@ -7,31 +7,31 @@ struct ShadeCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 4) {
                 Image(systemName: "thermometer.medium")
-                    .font(.system(size: 12))
+                    .font(.caption)
 
                 Text(String(format: "%.1f°C", scored.meanPredictedTemperature))
             }
 
             HStack(spacing: 4) {
                 Image(systemName: "sun.max")
-                    .font(.system(size: 12))
+                    .font(.caption)
 
                 Text(scored.shadowResult.safetyStatus.rawValue)
             }
 
             HStack(spacing: 4) {
                 Image(systemName: "person.2.fill")
-                    .font(.system(size: 12))
+                    .font(.caption)
 
                 Text(scored.occupancyLabel)
             }
         }
-        .font(.system(size: 12, weight: .semibold))
-        .foregroundStyle(.black)
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.primary)
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 5)
-                .fill(.white)
+                .fill(Color(.secondarySystemGroupedBackground))
                 .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
         )
     }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlanTripView: View {
     @Environment(\.dismiss) private var dismiss
+
     @State private var viewModel: PlanTripViewModel
     @Binding private var selectedDate: Date
 
@@ -18,7 +19,7 @@ struct PlanTripView: View {
     private let onSelectedDateChange: (Date) -> Void
     private let onSaveTrip: ((Trip) -> Void)?
 
-    private let pageBackground = Color(red: 0.92, green: 0.94, blue: 1.00)
+    private let pageBackground = Color(.systemGroupedBackground)
 
     init(
         parkName: String,
@@ -53,7 +54,7 @@ struct PlanTripView: View {
 
             VStack(alignment: .leading, spacing: 18) {
                 Text(parkName)
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
@@ -98,45 +99,48 @@ struct PlanTripView: View {
         .toolbar(.hidden, for: .navigationBar)
     }
 
+    /// Custom header: this screen is a HUD overlay above the live map,
+    /// outside any navigation context, so the system navigation bar cannot
+    /// appear here. Patched for accessibility and Dynamic Type.
     private var topBar: some View {
-        HStack {
-            Button {
-                close()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.title2.weight(.semibold))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Circle())
-                    .glassEffect(.regular.interactive(), in: .circle)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Back")
-
-            Spacer()
-
+        ZStack {
             Text(editingTrip == nil ? "Plan Your Trip" : "Edit Trip")
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
 
-            Spacer()
-
-            Button {
-                let trip = saveTrip()
-                if let onSaveTrip {
-                    onSaveTrip(trip)
-                } else {
+            HStack {
+                Button {
                     close()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.title2.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
+                        .glassEffect(.regular.interactive(), in: .circle)
                 }
-            } label: {
-                Text("Save")
-                    .font(.body.weight(.semibold))
-                    .frame(height: 44)
-                    .padding(.horizontal, 18)
-                    .contentShape(Capsule())
-                    .glassEffect(.regular.interactive(), in: .capsule)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Back")
+
+                Spacer()
+
+                Button {
+                    let trip = saveTrip()
+                    if let onSaveTrip {
+                        onSaveTrip(trip)
+                    } else {
+                        close()
+                    }
+                } label: {
+                    Text("Save")
+                        .font(.body.weight(.semibold))
+                        .frame(height: 44)
+                        .padding(.horizontal, 18)
+                        .contentShape(Capsule())
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.tint)
         }
         .padding(.horizontal, 16)
     }

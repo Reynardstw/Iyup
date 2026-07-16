@@ -7,12 +7,6 @@ struct TimeSliderPanel: View {
     private let range: ClosedRange<Double> = 6...18
     private let sliderHeight: CGFloat = 570
 
-    private let primaryPurple = Color(
-        red: 153 / 255,
-        green: 69 / 255,
-        blue: 236 / 255
-    )
-
     private var currentQuarterTime: Double {
         let calendar = Calendar.current
         let now = Date()
@@ -53,7 +47,7 @@ struct TimeSliderPanel: View {
                 )
                 .rotationEffect(.degrees(90))
                 .frame(width: sliderHeight)
-                .tint(primaryPurple)
+                .tint(Color.accentColor)
 
                 if !isAtNow {
                     Text(timeString(from: hour))
@@ -62,7 +56,7 @@ struct TimeSliderPanel: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(
-                            Capsule().fill(primaryPurple)
+                            Capsule().fill(Color.accentColor)
                         )
                         .offset(
                             x: -65,
@@ -85,8 +79,8 @@ struct TimeSliderPanel: View {
                         .background(
                             Capsule().fill(
                                 isAtNow
-                                ? primaryPurple
-                                : primaryPurple.opacity(0.6)
+                                ? Color.accentColor
+                                : Color.accentColor.opacity(0.6)
                             )
                         )
                 }

@@ -2,6 +2,8 @@ import SwiftUI
 import Charts
 
 struct IoTDashboardView: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 40
+
     @State private var viewModel: IoTViewModel
 
     @MainActor
@@ -20,7 +22,7 @@ struct IoTDashboardView: View {
                 Section {
                     HStack(spacing: 16) {
                         Image(systemName: viewModel.state.isConnected ? "dot.radiowaves.left.and.right" : "wifi.slash")
-                            .font(.system(size: 40))
+                            .font(.system(size: iconSize))
                             .symbolRenderingMode(.hierarchical)
 
                         VStack(alignment: .leading, spacing: 4) {

@@ -1,6 +1,9 @@
 import SwiftUI
 import Charts
 
+/// Native frame (NavigationStack title/subtitle, system sheet, semantic colors,
+/// native innards: Picker, Swift Charts, DisclosureGroup) with the original
+/// custom card shells (capsule info row, side-by-side metrics, 24pt cards).
 struct ParkDetailSheetContent: View {
     let detent: PresentationDetent
     let peekDetent: PresentationDetent
@@ -12,7 +15,6 @@ struct ParkDetailSheetContent: View {
     private var isLarge: Bool { detent == largeDetent }
 
     @ScaledMetric(relativeTo: .largeTitle) private var metricValueSize: CGFloat = 40
-    @ScaledMetric(relativeTo: .title3) private var headerTitleSize: CGFloat = 20
 
     private var cardBackground: Color {
         Color(.secondarySystemGroupedBackground)
@@ -22,6 +24,7 @@ struct ParkDetailSheetContent: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 16) {
+                    header
                     planTripButton
                     infoRow
                     weatherCards
@@ -30,15 +33,29 @@ struct ParkDetailSheetContent: View {
                     outfitCard
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 8)
+                .padding(.top, 20)
                 .padding(.bottom, 16)
             }
             .scrollDisabled(!isLarge)
             .background(isLarge ? Color(.systemGroupedBackground) : Color.clear)
-            .navigationTitle(info.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationSubtitle(info.city)
+            .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    private var header: some View {
+        VStack(spacing: 3) {
+            Text(info.name)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.center)
+
+            Text(info.city)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 
     // MARK: - Pinned CTA
@@ -48,7 +65,7 @@ struct ParkDetailSheetContent: View {
             Text("Plan Trip")
                 .font(.headline)
                 .frame(maxWidth: .infinity)
-                .frame(height: 45)
+                .frame(height: 48)
         }
         .buttonStyle(.glassProminent)
         .tint(.accentColor)

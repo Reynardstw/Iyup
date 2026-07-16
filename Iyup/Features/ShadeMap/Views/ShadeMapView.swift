@@ -3,6 +3,8 @@ import RealityKit
 import UIKit
 
 struct ShadeMapView: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var lockIconSize: CGFloat = 50
+
     var onDetailActiveChange: (Bool) -> Void = { _ in }
     
     var onTripSavedNavigateToTrips: () -> Void = {}
@@ -147,6 +149,9 @@ extension ShadeMapView {
             return
         }
 
+        // Sheet is up: dismiss it first, present the popover from the
+        // sheet's onDismiss callback (no timers), restore it when the
+        // popover closes.
         restoreSheetAfterCalendar = true
         pendingCalendar = true
         viewModel.showSheet = false
@@ -175,7 +180,7 @@ extension ShadeMapView {
         ZStack {
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(red: 234/255, green: 238/255, blue: 255/255),
+                    Color(.systemGroupedBackground),
                     .white
                 ]),
                 startPoint: .top,
@@ -210,7 +215,7 @@ extension ShadeMapView {
             // VStack untuk menyusun gembok dan teks dari atas ke bawah
             VStack(spacing: 8) { // Angka spacing mengatur jarak antara gembok dan teks
                 Image(systemName: "lock")
-                    .font(.system(size: 50, weight: .light)) // Ukuran diperkecil (sebelumnya 100)
+                    .font(.system(size: lockIconSize, weight: .light))
                     .foregroundColor(.gray)
                 
                 Text("Coming Soon")
@@ -390,8 +395,8 @@ extension ShadeMapView {
     private var carouselChevrons: some View {
         HStack {
             Image(systemName: "chevron.left")
-                .foregroundColor(.black)
-                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.primary)
+                .font(.title.weight(.medium))
                 .padding(.horizontal, 20)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -401,8 +406,8 @@ extension ShadeMapView {
             Spacer()
             
             Image(systemName: "chevron.right")
-                .foregroundColor(.black)
-                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.primary)
+                .font(.title.weight(.medium))
                 .padding(.horizontal, 20)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -415,16 +420,16 @@ extension ShadeMapView {
     private var mapHeader: some View {
         VStack(spacing: 0) {
             Text(viewModel.currentPark.name)
-                .font(.system(size: 32, weight: .bold))
+                .font(.largeTitle.weight(.bold))
             
             Text(viewModel.currentPark.description)
-                .font(.system(size: 16, weight: .medium))
+                .font(.callout.weight(.medium))
                 .padding(.bottom, 4)
             
             HStack {
                 Image(systemName: "location.fill")
                 Text(viewModel.currentPark.distanceInfo)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.footnote.weight(.medium))
             }
             .font(.footnote)
         }
@@ -449,11 +454,11 @@ extension ShadeMapView {
         var body: some View {
             HStack(spacing: 6) {
                 Image(systemName: symbolName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .symbolRenderingMode(.multicolor)
                 
                 Text("\(temperatureCelsius)°")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.callout.weight(.semibold))
             }
             .foregroundStyle(.primary.opacity(0.72))
             .padding(.horizontal, 14)

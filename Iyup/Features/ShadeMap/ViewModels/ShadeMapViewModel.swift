@@ -44,7 +44,6 @@ class ShadeMapViewModel {
 
     let planTripMapHeight: CGFloat = 132
     let planTripMapTopPadding: CGFloat = 204
-    let planTripMapReservedHeight: CGFloat = 150
 
     let weatherBadgeBottomPadding: CGFloat = 82
     let timeSliderBottomPadding: CGFloat = 52
@@ -148,38 +147,22 @@ class ShadeMapViewModel {
         showDetail = false
         showSheet = false
         showPlanTrip = false
+        sheetDetent = peekDetent
     }
 
+    /// Plan trip presents as a sheet stacked on top of the detail sheet;
+    /// the system animates the presentation, the detail sheet stays behind.
     func openPlanTripFromSheet() {
         planTripViewModel.selectedDate = selectedDate
-        showSheet = false
+        showPlanTrip = true
+    }
 
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(for: .milliseconds(80))
-            withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
-                self.showPlanTrip = true
-                self.mapDisplayMode = .planTrip
-            }
-            self.applyMapDisplayMode(.planTrip, duration: 0.8)
-        }
+    func planTripDidDismiss() {
+        // Detail sheet never left; nothing to restore.
     }
 
     func closePlanTrip() {
-        withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
-            showPlanTrip = false
-            mapDisplayMode = .detail
-        }
-
-        applyMapDisplayMode(.detail, duration: 0.8)
-
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(for: .milliseconds(180))
-            if self.showDetail {
-                self.showSheet = true
-            }
-        }
+        showPlanTrip = false
     }
 
     func openSavedTripInEditView(_ trip: Trip) {

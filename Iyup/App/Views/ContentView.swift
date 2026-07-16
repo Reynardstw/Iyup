@@ -9,8 +9,6 @@ private enum RootTab: Hashable {
 struct ContentView: View {
     @State private var selectedTab: RootTab = .parks
 
-    private let brandPurple = Color(red: 153/255, green: 69/255, blue: 236/255)
-
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Parks", systemImage: "tree", value: RootTab.parks) {
@@ -29,7 +27,6 @@ struct ContentView: View {
                 SearchPlaceholderView()
             }
         }
-        .tint(brandPurple)
     }
 }
 
@@ -39,7 +36,7 @@ private struct SearchPlaceholderView: View {
             ContentUnavailableView(
                 "Search",
                 systemImage: "magnifyingglass",
-                description: Text("Cari taman di sini.")
+                description: Text("Search your park here.")
             )
             .navigationTitle("Search")
         }

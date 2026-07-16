@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PlanTripView: View {
     @Environment(\.dismiss) private var dismiss
+
     @State private var viewModel: PlanTripViewModel
     @Binding private var selectedDate: Date
 
@@ -10,7 +11,6 @@ struct PlanTripView: View {
     let city: String
     let address: String
 
-    private let mapTopSpacing: CGFloat
 
     private let editingTrip: Trip?
 
@@ -18,8 +18,7 @@ struct PlanTripView: View {
     private let onSelectedDateChange: (Date) -> Void
     private let onSaveTrip: ((Trip) -> Void)?
 
-    private let accent = Color(red: 0.60, green: 0.22, blue: 0.92)
-    private let pageBackground = Color(red: 0.92, green: 0.94, blue: 1.00)
+    private let pageBackground = Color(.systemGroupedBackground)
 
     init(
         parkName: String,
@@ -28,7 +27,6 @@ struct PlanTripView: View {
         viewModel: PlanTripViewModel,
         city: String = "",
         address: String = "",
-        mapTopSpacing: CGFloat = 0,
         editingTrip: Trip? = nil,
         onClose: (() -> Void)? = nil,
         onSelectedDateChange: @escaping (Date) -> Void = { _ in },
@@ -38,7 +36,6 @@ struct PlanTripView: View {
         self.recommendedShadeWindow = recommendedShadeWindow
         self.city = city
         self.address = address
-        self.mapTopSpacing = mapTopSpacing
         self.editingTrip = editingTrip
         self.onClose = onClose
         self.onSelectedDateChange = onSelectedDateChange
@@ -48,17 +45,23 @@ struct PlanTripView: View {
     }
 
     var body: some View {
+        NavigationStack {
+            planTripContent
+        }
+    }
+
+    private var planTripContent: some View {
         ZStack(alignment: .top) {
             pageBackground
                 .ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 18) {
                 Text(parkName)
-                    .font(.system(size: 30, weight: .bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
-                    .padding(.top, 132)
+                    .padding(.top, 16)
 
                 mapPreviewWindow
 
@@ -82,8 +85,6 @@ struct PlanTripView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 18)
-
-            topBar
         }
         .onAppear {
             viewModel.selectedDate = selectedDate
@@ -96,24 +97,26 @@ struct PlanTripView: View {
             viewModel.selectedDate = newValue
             onSelectedDateChange(newValue)
         }
-        .toolbar(.hidden, for: .navigationBar)
-    }
-
-    private var topBar: some View {
-        TripHeaderBar(
-            title: editingTrip == nil ? "Plan Your Trip" : "Edit Trip",
-            trailingTitle: "Save",
-            trailingProminent: true,
-            onBack: { close() },
-            onTrailing: {
-                let trip = saveTrip()
-                if let onSaveTrip {
-                    onSaveTrip(trip)
-                } else {
+        .navigationTitle(editingTrip == nil ? "Plan Your Trip" : "Edit Trip")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
                     close()
                 }
             }
-        )
+
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    let trip = saveTrip()
+                    if let onSaveTrip {
+                        onSaveTrip(trip)
+                    } else {
+                        close()
+                    }
+                }
+            }
+        }
     }
 
     private func close() {
@@ -150,25 +153,16 @@ struct PlanTripView: View {
         return trip
     }
 
-    @ViewBuilder
     private var mapPreviewWindow: some View {
-        if mapTopSpacing > 0 {
-            Color.clear
-                .frame(maxWidth: .infinity)
-                .frame(height: mapTopSpacing)
-                .padding(.horizontal, 8)
-                .accessibilityHidden(true)
-        } else {
-            StandalonePark3DPreview(
-                location: previewParkLocation,
-                hour: selectedHour,
-                highlightedSpotIDs: viewModel.shadedSpotIDs
-            )
-            .frame(maxWidth: .infinity)
-            .frame(height: 132)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .padding(.horizontal, 8)
-        }
+        StandalonePark3DPreview(
+            location: previewParkLocation,
+            hour: selectedHour,
+            highlightedSpotIDs: viewModel.shadedSpotIDs
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: 132)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.horizontal, 8)
     }
 
     private var previewParkLocation: ParkLocation {
@@ -273,6 +267,5 @@ struct PlanTripView: View {
         recommendedShadeWindow: "16.00 - 18.00",
         selectedDate: .constant(Date()),
         viewModel: AppComposition.makePlanTripViewModel(),
-        mapTopSpacing: 150
     )
 }

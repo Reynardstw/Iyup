@@ -3,18 +3,21 @@ import RealityKit
 import UIKit
 
 struct ShadeMapView: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var lockIconSize: CGFloat = 50
+
     var onDetailActiveChange: (Bool) -> Void = { _ in }
-
+    
     var onTripSavedNavigateToTrips: () -> Void = {}
-
+    
     @State private var viewModel = ShadeMapViewModel()
-
+    
     @State private var lastDrag: CGSize = .zero
     @State private var lastMag: CGFloat = 1
     @State private var lastPan: CGSize = .zero
     @State private var lastRotation: Double = 0
     @State private var restoreSheetAfterCalendar = false
-
+    @State private var pendingCalendar = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -23,7 +26,6 @@ struct ShadeMapView: View {
                 lockPlaceholderLayer
                 realityMapLayer
                 controlUILayer
-                planTripLayer
             }
             .onDisappear {
                 viewModel.selectedSpot = nil
@@ -39,9 +41,14 @@ struct ShadeMapView: View {
             }
             .onChange(of: viewModel.showCalendar) { _, isShowing in
                 guard !isShowing else { return }
-                restoreNativeSheetAfterCalendarIfNeeded()
+                restoreSheetAfterCalendarIfNeeded()
             }
-            .sheet(isPresented: $viewModel.showSheet) {
+            .sheet(
+                isPresented: $viewModel.showSheet,
+                onDismiss: {
+                    presentCalendarIfPending()
+                }
+            ) {
                 ParkDetailSheetContent(
                     detent: viewModel.sheetDetent,
                     peekDetent: viewModel.peekDetent,
@@ -61,6 +68,24 @@ struct ShadeMapView: View {
                 .presentationBackgroundInteraction(.enabled(upThrough: viewModel.midDetent))
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled()
+                .sheet(isPresented: $viewModel.showPlanTrip) {
+                    PlanTripView(
+                        parkName: viewModel.parkDetailViewModel.info.name,
+                        recommendedShadeWindow: viewModel.parkDetailViewModel.info.recommendedShadeWindow,
+                        selectedDate: $viewModel.selectedDate,
+                        viewModel: viewModel.planTripViewModel,
+                        city: viewModel.parkDetailViewModel.info.city,
+                        address: viewModel.parkDetailViewModel.info.address,
+                        onSelectedDateChange: { newDate in
+                            viewModel.applyPlanTripDate(newDate)
+                        },
+                        onSaveTrip: { _ in
+                            viewModel.closePlanTrip()
+                            viewModel.closeDetail()
+                            onTripSavedNavigateToTrips()
+                        }
+                    )
+                }
             }
             .task {
                 await viewModel.loadParkDetail()
@@ -68,6 +93,49 @@ struct ShadeMapView: View {
             .navigationDestination(item: $viewModel.selectedTripForEditing) { trip in
                 EditTripView(trip: trip)
             }
+            .toolbar {
+                if viewModel.showDetail {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            withAnimation { viewModel.selectedSpot = nil }
+                            viewModel.closeDetail()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                        }
+                        .accessibilityLabel("Back")
+                    }
+
+                    ToolbarItem(placement: .principal) {
+                        Button {
+                            openCalendarPopover()
+                        } label: {
+                            Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .glassEffect(.regular.interactive(), in: .capsule)
+                        }
+                        .buttonStyle(.plain)
+                        .popover(isPresented: $viewModel.showCalendar) {
+                            DatePicker(
+                                "Select date",
+                                selection: $viewModel.selectedDate,
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.graphical)
+                            .labelsHidden()
+                            .frame(width: 320, height: 340)
+                            .presentationCompactAdaptation(.popover)
+                        }
+                        .accessibilityLabel("Select date")
+                    }
+                }
+            }
+            .toolbarVisibility(
+                viewModel.showDetail ? .visible : .hidden,
+                for: .navigationBar
+            )
         }
         .toolbar(viewModel.showDetail ? .hidden : .visible, for: .tabBar)
         .animation(.easeInOut(duration: 0.25), value: viewModel.showDetail)
@@ -86,54 +154,56 @@ extension ShadeMapView {
         .opacity(0.001)
         .allowsHitTesting(false)
     }
-
-    private func openNativeCalendarPopover() {
+    
+    private func openCalendarPopover() {
         if viewModel.showCalendar {
             viewModel.showCalendar = false
             return
         }
 
-        restoreSheetAfterCalendar = viewModel.showDetail
-            && viewModel.showSheet
-            && !viewModel.showPlanTrip
-
-        viewModel.showSheet = false
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(160))
-            guard viewModel.showDetail, !viewModel.showPlanTrip else {
-                restoreSheetAfterCalendar = false
-                return
-            }
+        guard viewModel.showSheet else {
             viewModel.showCalendar = true
+            return
         }
+
+        // Sheet is up: dismiss it first, present the popover from the
+        // sheet's onDismiss callback (no timers), restore it when the
+        // popover closes.
+        restoreSheetAfterCalendar = true
+        pendingCalendar = true
+        viewModel.showSheet = false
     }
 
-    private func restoreNativeSheetAfterCalendarIfNeeded() {
-        guard restoreSheetAfterCalendar else { return }
+    private func presentCalendarIfPending() {
+        guard pendingCalendar else { return }
+        pendingCalendar = false
+
         guard viewModel.showDetail, !viewModel.showPlanTrip else {
             restoreSheetAfterCalendar = false
             return
         }
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(0))
-            viewModel.showSheet = true
-            restoreSheetAfterCalendar = false
-        }
+        viewModel.showCalendar = true
     }
 
+    private func restoreSheetAfterCalendarIfNeeded() {
+        guard restoreSheetAfterCalendar else { return }
+        restoreSheetAfterCalendar = false
+
+        guard viewModel.showDetail, !viewModel.showPlanTrip else { return }
+        viewModel.showSheet = true
+    }
+    
     private var backgroundLayer: some View {
         ZStack {
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(red: 234/255, green: 238/255, blue: 255/255),
+                    Color(.systemGroupedBackground),
                     .white
                 ]),
                 startPoint: .top,
                 endPoint: .bottom
             )
-
+            
             RadialGradient(
                 gradient: Gradient(colors: [
                     Color(red: 253/255, green: 224/255, blue: 120/255).opacity(0.9),
@@ -148,35 +218,42 @@ extension ShadeMapView {
         }
         .ignoresSafeArea()
     }
-
+    
     private var lockPlaceholderLayer: some View {
         ZStack {
+            // Gambar background (Map)
             Image("tebet_silhouette_smooth")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxWidth: 220)
-                                    .rotationEffect(.degrees(30))
-                                    .opacity(0.8)
-
-            Image(systemName: "lock")
-                .font(.system(size: 100, weight: .light))
-                .foregroundColor(.gray)
-        }
-        .opacity(viewModel.currentPark.isMapped ? 0 : 1)
-        .allowsHitTesting(!viewModel.currentPark.isMapped)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 220)
+                .rotationEffect(.degrees(30))
+                .opacity(0.8)
+            
+            // VStack untuk menyusun gembok dan teks dari atas ke bawah
+            VStack(spacing: 8) { // Angka spacing mengatur jarak antara gembok dan teks
+                Image(systemName: "lock")
+                    .font(.system(size: lockIconSize, weight: .light))
+                    .foregroundColor(.gray)
+                
+                Text("Coming Soon")
+                    .font(.headline) // Bisa diganti .subheadline atau ukuran lain sesuai selera
+                    .foregroundColor(.gray)
+            }
+        }       .opacity(viewModel.currentPark.isMapped ? 0 : 1)
+            .allowsHitTesting(!viewModel.currentPark.isMapped)
     }
-
+    
     private var realityMapLayer: some View {
         RealityView { content in
             let root = await viewModel.scene.build()
-
+            
             content.add(root)
             viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
-
+            
             if let realScene = root.scene {
                 viewModel.scene.startGlowLoop(scene: realScene)
             }
-
+            
             viewModel.shadeMapReady = true
         } update: { _ in
             viewModel.scene.setSun(hour: viewModel.hour, location: viewModel.parkLocation)
@@ -202,7 +279,7 @@ extension ShadeMapView {
         .animation(.spring(response: 0.48, dampingFraction: 0.86), value: viewModel.mapDisplayMode)
         .zIndex(viewModel.mapDisplayMode.isPlanTripMini ? 20 : 0)
         .overlay(alignment: .bottomLeading) {
-            if viewModel.showDetail && !viewModel.showPlanTrip {
+            if viewModel.showDetail {
                 WeatherBadge(
                     temperatureCelsius: viewModel.parkDetailViewModel.info.temperatureCelsius,
                     symbolName: viewModel.parkDetailViewModel.info.weatherSymbolName
@@ -213,7 +290,7 @@ extension ShadeMapView {
             }
         }
         .overlay {
-            if viewModel.showDetail && !viewModel.showPlanTrip {
+            if viewModel.showDetail {
                 TwoFingerPan(
                     onPan: { translation in
                         withAnimation { viewModel.selectedSpot = nil }
@@ -238,32 +315,30 @@ extension ShadeMapView {
         .simultaneousGesture((viewModel.showDetail && !viewModel.showPlanTrip) ? zoomGesture : nil)
         .opacity(viewModel.currentPark.isMapped ? 1 : 0)
     }
-
+    
     private var controlUILayer: some View {
         ZStack {
             if !viewModel.showPlanTrip {
                 VStack(spacing: 0) {
-                    if viewModel.showDetail {
-                        detailTopBar
-                    } else {
+                    if !viewModel.showDetail {
                         mapHeader
                     }
-
+                    
                     Spacer()
-
+                    
                     if !viewModel.showDetail {
                         carouselChevrons
                     }
-
+                    
                     Spacer()
-
+                    
                     if !viewModel.showDetail {
                         mapFooter
                     }
                 }
             }
-
-            if viewModel.showDetail && !viewModel.showPlanTrip {
+            
+            if viewModel.showDetail {
                 HStack {
                     Spacer()
                     TimeSliderPanel(hour: $viewModel.hour)
@@ -276,32 +351,7 @@ extension ShadeMapView {
             }
         }
     }
-
-    @ViewBuilder
-    private var planTripLayer: some View {
-        if viewModel.showPlanTrip {
-            PlanTripView(
-                parkName: viewModel.parkDetailViewModel.info.name,
-                recommendedShadeWindow: viewModel.parkDetailViewModel.info.recommendedShadeWindow,
-                selectedDate: $viewModel.selectedDate,
-                viewModel: viewModel.planTripViewModel,
-                city: viewModel.parkDetailViewModel.info.city,
-                address: viewModel.parkDetailViewModel.info.address,
-                mapTopSpacing: viewModel.planTripMapReservedHeight,
-                onClose: {
-                    viewModel.closePlanTrip()
-                },
-                onSelectedDateChange: { newDate in
-                    viewModel.applyPlanTripDate(newDate)
-                },
-                onSaveTrip: { _ in
-                    viewModel.closeDetail()
-                    onTripSavedNavigateToTrips()
-                }
-            )           .transition(.move(edge: .trailing).combined(with: .opacity))
-            .zIndex(10)
-        }
-    }
+    
 }
 
 extension ShadeMapView {
@@ -320,7 +370,7 @@ extension ShadeMapView {
                         withAnimation { viewModel.selectedSpot = nil }
                     }
                 )
-
+            
             if let selectedSpot = viewModel.selectedSpot,
                let scored = viewModel.scoreViewModel.scoredResults.first(where: { $0.spot.id == selectedSpot.spotID }) {
                 ShadeCard(scored: scored)
@@ -331,23 +381,23 @@ extension ShadeMapView {
             }
         }
     }
-
+    
     private var carouselChevrons: some View {
         HStack {
             Image(systemName: "chevron.left")
-                .foregroundColor(.black)
-                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.primary)
+                .font(.title.weight(.medium))
                 .padding(.horizontal, 20)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     withAnimation(.snappy) { viewModel.previousPark() }
                 }
-
+            
             Spacer()
-
+            
             Image(systemName: "chevron.right")
-                .foregroundColor(.black)
-                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.primary)
+                .font(.title.weight(.medium))
                 .padding(.horizontal, 20)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -356,103 +406,49 @@ extension ShadeMapView {
         }
         .padding(.horizontal, 20)
     }
-
+    
     private var mapHeader: some View {
         VStack(spacing: 0) {
             Text(viewModel.currentPark.name)
-                .font(.system(size: 32, weight: .bold))
-
+                .font(.largeTitle.weight(.bold))
+            
             Text(viewModel.currentPark.description)
-                .font(.system(size: 16, weight: .medium))
+                .font(.callout.weight(.medium))
                 .padding(.bottom, 4)
-
+            
             HStack {
                 Image(systemName: "location.fill")
                 Text(viewModel.currentPark.distanceInfo)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.footnote.weight(.medium))
             }
             .font(.footnote)
         }
         .padding(.top, 60)
     }
-
-    private var detailTopBar: some View {
-        HStack {
-            Button {
-                withAnimation { viewModel.selectedSpot = nil }
-                viewModel.closeDetail()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
-                    .padding(12)
-                    .glassEffect(in: .circle)
-            }
-
-            Spacer()
-
-            Button {
-                openNativeCalendarPopover()
-            } label: {
-                Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
-                    .font(.system(size:18))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .contentShape(Capsule())
-                    .glassEffect(in: .capsule)
-            }
-            .popover(isPresented: $viewModel.showCalendar) {
-                VStack {
-                    DatePicker(
-                        "Pilih Tanggal",
-                        selection: $viewModel.selectedDate,
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.graphical)
-                }
-                .labelsHidden()
-                .datePickerStyle(.graphical)
-                .scaleEffect(0.85)
-                .padding(2)
-                .frame(width: 280, height: 250)
-                .presentationCompactAdaptation(.popover)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.left")
-                .font(.title)
-                .padding(12)
-                .opacity(0)
-        }
-        .padding(.horizontal, 16)
-    }
-
+    
     private var mapFooter: some View {
         Button("View Details") {
             viewModel.handleViewDetails()
         }
         .buttonStyle(.borderedProminent)
-        .tint(viewModel.currentPark.isMapped ? Color(red: 153/255, green: 69/255, blue: 236/255) : Color.gray)
+        .tint(viewModel.currentPark.isMapped ? Color.accentColor : Color.gray)
         .disabled(!viewModel.currentPark.isMapped)
         .controlSize(.large)
         .padding(.bottom, 30)
     }
-
+    
     struct WeatherBadge: View {
         let temperatureCelsius: Int
         let symbolName: String
-
+        
         var body: some View {
             HStack(spacing: 6) {
                 Image(systemName: symbolName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .symbolRenderingMode(.multicolor)
-
+                
                 Text("\(temperatureCelsius)°")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.callout.weight(.semibold))
             }
             .foregroundStyle(.primary.opacity(0.72))
             .padding(.horizontal, 14)
@@ -469,7 +465,7 @@ extension ShadeMapView {
         SpatialTapGesture()
             .targetedToAnyEntity()
             .onEnded { value in
-
+                
                 if let spot = viewModel.scene.spotForEntity(value.entity.name) {
                     withAnimation(.spring(duration: 0.3)) {
                         viewModel.selectedSpot = spot
@@ -482,7 +478,7 @@ extension ShadeMapView {
                 }
             }
     }
-
+    
     private var panGesture: some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
@@ -495,7 +491,7 @@ extension ShadeMapView {
                 lastDrag = .zero
             }
     }
-
+    
     private var rotateGesture: some Gesture {
         RotateGesture()
             .onChanged { value in
@@ -507,7 +503,7 @@ extension ShadeMapView {
                 lastRotation = 0
             }
     }
-
+    
     private var zoomGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in

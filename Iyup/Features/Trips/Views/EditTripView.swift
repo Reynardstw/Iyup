@@ -3,6 +3,7 @@ import MapKit
 import CoreLocation
 
 struct EditTripView: View {
+
     @Environment(\.dismiss) private var dismiss
 
     let trip: Trip
@@ -14,7 +15,7 @@ struct EditTripView: View {
     @State private var showPlanTrip = false
     @State private var planTripViewModel = AppComposition.makePlanTripViewModel()
 
-    private let pageBackground = Color(red: 245/255, green: 247/255, blue: 250/255)
+    private let pageBackground = Color(.systemGroupedBackground)
 
     init(trip: Trip) {
         self.trip = trip
@@ -39,15 +40,15 @@ struct EditTripView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     Text(trip.parkName)
-                        .font(.system(size: 34, weight: .bold))
+                        .font(.largeTitle.weight(.bold))
                         .foregroundStyle(.primary)
                         .lineLimit(2)
                         .minimumScaleFactor(0.82)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
 
                     mapPreview
 
@@ -61,8 +62,12 @@ struct EditTripView: View {
             }
         }
         .background(pageBackground.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
-        .navigationDestination(isPresented: $showPlanTrip) {
+        .tripToolbar(
+            title: "Trip Details",
+            trailingTitle: "Edit",
+            onTrailing: { showPlanTrip = true }
+        )
+        .sheet(isPresented: $showPlanTrip) {
             PlanTripView(
                 parkName: currentTrip.parkName,
                 recommendedShadeWindow: currentTrip.recommendedShadeWindow,
@@ -82,18 +87,6 @@ struct EditTripView: View {
                 }
             )
         }
-    }
-
-    private var header: some View {
-        TripHeaderBar(
-            title: "Trip Details",
-            trailingTitle: "Edit",
-            trailingProminent: false,
-            onBack: { dismiss() },
-            onTrailing: {
-                showPlanTrip = true
-            }
-        )
     }
 
     private var mapPreview: some View {
@@ -117,7 +110,7 @@ struct EditTripView: View {
                 openInAppleMaps()
             } label: {
                 Text(displayAddress)
-                    .font(.system(size: 15))
+                    .font(.subheadline)
                     .foregroundStyle(.blue)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,10 +122,10 @@ struct EditTripView: View {
     private var tripInfoCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Date & Time", systemImage: "calendar")
-                .font(.system(size: 15, weight: .regular))
+                .font(.subheadline)
 
             Text(relativeTripText)
-                .font(.system(size: 36, weight: .bold))
+                .font(.largeTitle.weight(.bold))
                 .lineLimit(2)
                 .minimumScaleFactor(0.65)
 
@@ -140,26 +133,26 @@ struct EditTripView: View {
                 Text(longDateText)
                 Text(timeRangeText)
             }
-            .font(.system(size: 15, weight: .regular))
+            .font(.subheadline)
 
             Label(alertOption.rawValue, systemImage: "bell")
-                .font(.system(size: 15, weight: .medium))
+                .font(.subheadline.weight(.medium))
 
             if !trip.recommendedShadeWindow.isEmpty {
                 Label("Recommended shade: \(trip.recommendedShadeWindow)", systemImage: "sun.max")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.subheadline.weight(.medium))
             }
 
             if !shadeConditionText.isEmpty {
                 Text(shadeConditionText)
-                    .font(.system(size: 14))
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.white)
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 38))
     }
 
@@ -238,7 +231,7 @@ struct EditTripView: View {
                 date: Date().addingTimeInterval(5 * 60 * 60),
                 recommendedShadeWindow: "16.00 - 18.00",
                 alertOption: .thirtyMinutesBefore,
-                shadeConditionText: "Sebagian besar area taman teduh pada waktu ini."
+                shadeConditionText: "Most of the park is shaded at this time."
             )
         )
     }

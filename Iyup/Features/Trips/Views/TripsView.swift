@@ -4,7 +4,7 @@ struct TripsView: View {
     @State private var store = TripStore.shared
     @State private var selectedTrip: Trip?
 
-    private let pageBackground = Color(red: 0.92, green: 0.94, blue: 1.00)
+    private let pageBackground = Color(.systemGroupedBackground)
 
     var body: some View {
         NavigationStack {
@@ -35,7 +35,7 @@ struct TripsView: View {
                 .padding(.bottom, 4)
 
             Text("Let's plan your first trip")
-                .font(.system(size: 20, weight: .bold))
+                .font(.title3.weight(.bold))
                 .foregroundStyle(.primary)
 
             Text("Go to Parks to start")
@@ -72,7 +72,7 @@ struct TripsView: View {
     }
 
     private func deleteTrips(at offsets: IndexSet) {
-        offsets.map { store.trips[$0] }.forEach(TripNotificationScheduler.cancel)
+        offsets.map { store.trips[$0] }.forEach{TripNotificationScheduler.cancel(for: $0)}
         store.delete(at: offsets)
     }
 }
@@ -95,7 +95,7 @@ private struct TripCard: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(trip.parkName)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.callout.weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
 
@@ -108,7 +108,7 @@ private struct TripCard: View {
                 Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary.opacity(0.55))
             }
             .padding(.horizontal, 16)

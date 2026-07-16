@@ -1,10 +1,10 @@
 import Foundation
 
 enum ShadowSafetyStatus: String, CaseIterable, Sendable {
-    case fullySafe = "Aman penuh"
-    case recommended = "Direkomendasikan"
-    case alternative = "Alternatif"
-    case unsafe = "Tidak aman"
+    case fullySafe = "Dim"
+    case recommended = "Shady"
+    case alternative = "Bright"
+    case unsafe = "Very Bright"
 
     var rankPriority: Int {
         switch self {

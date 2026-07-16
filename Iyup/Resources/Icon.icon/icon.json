@@ -1,0 +1,111 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.97255,0.84087,0.96429,1.00000",
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
+  },
+  "groups" : [
+    {
+      "blend-mode" : "normal",
+      "blur-material" : null,
+      "hidden" : false,
+      "layers" : [
+        {
+          "hidden" : false,
+          "image-name" : "Image 6.png",
+          "name" : "Image 6",
+          "position" : {
+            "scale" : 1.4,
+            "translation-in-points" : [
+              -189.70000000000005,
+              -187
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "Image 4.png",
+          "name" : "Image 4",
+          "position" : {
+            "scale" : 1.4,
+            "translation-in-points" : [
+              -141.00000000000006,
+              -178.3812499999999
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "Image 3.png",
+          "name" : "Image 3",
+          "position" : {
+            "scale" : 1.4,
+            "translation-in-points" : [
+              -92.40000000000003,
+              -159.59999999999997
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "Image 2.png",
+          "name" : "Image 2",
+          "position" : {
+            "scale" : 1.4,
+            "translation-in-points" : [
+              -53.200000000000045,
+              -126
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "Image.png",
+          "name" : "Image",
+          "position" : {
+            "scale" : 1.4,
+            "translation-in-points" : [
+              -13.700000000000045,
+              -85.39999999999998
+            ]
+          }
+        },
+        {
+          "glass" : true,
+          "image-name" : "Icon.png",
+          "name" : "Icon",
+          "position" : {
+            "scale" : 1.4,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

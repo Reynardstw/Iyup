@@ -18,7 +18,6 @@ struct PlanTripView: View {
     private let onSelectedDateChange: (Date) -> Void
     private let onSaveTrip: ((Trip) -> Void)?
 
-    private let accent = Color(red: 0.60, green: 0.22, blue: 0.92)
     private let pageBackground = Color(red: 0.92, green: 0.94, blue: 1.00)
 
     init(
@@ -58,7 +57,7 @@ struct PlanTripView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
-                    .padding(.top, 132)
+                    .padding(.top, 80)
 
                 mapPreviewWindow
 
@@ -100,20 +99,46 @@ struct PlanTripView: View {
     }
 
     private var topBar: some View {
-        TripHeaderBar(
-            title: editingTrip == nil ? "Plan Your Trip" : "Edit Trip",
-            trailingTitle: "Save",
-            trailingProminent: true,
-            onBack: { close() },
-            onTrailing: {
+        HStack {
+            Button {
+                close()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.title2.weight(.semibold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
+                    .glassEffect(.regular.interactive(), in: .circle)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Back")
+
+            Spacer()
+
+            Text(editingTrip == nil ? "Plan Your Trip" : "Edit Trip")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+
+            Spacer()
+
+            Button {
                 let trip = saveTrip()
                 if let onSaveTrip {
                     onSaveTrip(trip)
                 } else {
                     close()
                 }
+            } label: {
+                Text("Save")
+                    .font(.body.weight(.semibold))
+                    .frame(height: 44)
+                    .padding(.horizontal, 18)
+                    .contentShape(Capsule())
+                    .glassEffect(.regular.interactive(), in: .capsule)
             }
-        )
+            .buttonStyle(.plain)
+            .foregroundStyle(.tint)
+        }
+        .padding(.horizontal, 16)
     }
 
     private func close() {

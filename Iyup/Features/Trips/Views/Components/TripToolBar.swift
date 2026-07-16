@@ -1,50 +1,56 @@
 import SwiftUI
 
-struct TripHeaderBar: View {
+struct TripToolbar: ViewModifier {
     let title: String
     let trailingTitle: String
-
     var trailingProminent: Bool = false
-
-    let onBack: () -> Void
+    var onBack: (() -> Void)? = nil
     let onTrailing: () -> Void
 
-    var body: some View {   
-        ZStack {
-            Text(title)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.black)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .allowsHitTesting(false)
-
-            HStack {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.black)
-                        .frame(width: 45, height: 48)
-                        .glassEffect(in: .circle)
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if let onBack {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            onBack()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                        }
+                        .accessibilityLabel("Back")
+                    }
                 }
 
-                Spacer(minLength: 0)
-
-                Button(action: onTrailing) {
-                    Text(trailingTitle)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(trailingProminent ? .white : .black)
-                        .padding(.horizontal, 18)
-                        .frame(height: 48)
-                        .background {
-                            if trailingProminent {
-                                Capsule().fill(Color.accentColor)
-                            }
-                        }
-                        .glassEffect(in: .capsule)
+                ToolbarItem(placement: .confirmationAction) {
+                    if trailingProminent {
+                        Button(trailingTitle, action: onTrailing)
+                            .buttonStyle(.glassProminent)
+                            .tint(.accentColor)
+                    } else {
+                        Button(trailingTitle, action: onTrailing)
+                    }
                 }
             }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+            .navigationBarBackButtonHidden(onBack != nil)
+    }
+}
+
+extension View {
+    func tripToolbar(
+        title: String,
+        trailingTitle: String,
+        trailingProminent: Bool = false,
+        onBack: (() -> Void)? = nil,
+        onTrailing: @escaping () -> Void
+    ) -> some View {
+        modifier(TripToolbar(
+            title: title,
+            trailingTitle: trailingTitle,
+            trailingProminent: trailingProminent,
+            onBack: onBack,
+            onTrailing: onTrailing
+        ))
     }
 }

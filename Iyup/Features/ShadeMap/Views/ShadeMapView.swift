@@ -14,6 +14,7 @@ struct ShadeMapView: View {
     @State private var lastPan: CGSize = .zero
     @State private var lastRotation: Double = 0
     @State private var restoreSheetAfterCalendar = false
+    @State private var pendingCalendar = false
     
     var body: some View {
         NavigationStack {
@@ -39,9 +40,14 @@ struct ShadeMapView: View {
             }
             .onChange(of: viewModel.showCalendar) { _, isShowing in
                 guard !isShowing else { return }
-                restoreNativeSheetAfterCalendarIfNeeded()
+                restoreSheetAfterCalendarIfNeeded()
             }
-            .sheet(isPresented: $viewModel.showSheet) {
+            .sheet(
+                isPresented: $viewModel.showSheet,
+                onDismiss: {
+                    presentCalendarIfPending()
+                }
+            ) {
                 ParkDetailSheetContent(
                     detent: viewModel.sheetDetent,
                     peekDetent: viewModel.peekDetent,
@@ -68,6 +74,49 @@ struct ShadeMapView: View {
             .navigationDestination(item: $viewModel.selectedTripForEditing) { trip in
                 EditTripView(trip: trip)
             }
+            .toolbar {
+                if viewModel.showDetail && !viewModel.showPlanTrip {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            withAnimation { viewModel.selectedSpot = nil }
+                            viewModel.closeDetail()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                        }
+                        .accessibilityLabel("Back")
+                    }
+
+                    ToolbarItem(placement: .principal) {
+                        Button {
+                            openCalendarPopover()
+                        } label: {
+                            Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 12)
+                                .glassEffect(.regular.interactive(), in: .capsule)
+                        }
+                        .buttonStyle(.plain)
+                        .popover(isPresented: $viewModel.showCalendar) {
+                            DatePicker(
+                                "Select date",
+                                selection: $viewModel.selectedDate,
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.graphical)
+                            .labelsHidden()
+                            .frame(width: 320, height: 340)
+                            .presentationCompactAdaptation(.popover)
+                        }
+                        .accessibilityLabel("Select date")
+                    }
+                }
+            }
+            .toolbarVisibility(
+                viewModel.showDetail && !viewModel.showPlanTrip ? .visible : .hidden,
+                for: .navigationBar
+            )
         }
         .toolbar(viewModel.showDetail ? .hidden : .visible, for: .tabBar)
         .animation(.easeInOut(duration: 0.25), value: viewModel.showDetail)
@@ -87,40 +136,39 @@ extension ShadeMapView {
         .allowsHitTesting(false)
     }
     
-    private func openNativeCalendarPopover() {
+    private func openCalendarPopover() {
         if viewModel.showCalendar {
             viewModel.showCalendar = false
             return
         }
-        
-        restoreSheetAfterCalendar = viewModel.showDetail
-        && viewModel.showSheet
-        && !viewModel.showPlanTrip
-        
-        viewModel.showSheet = false
-        
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(160))
-            guard viewModel.showDetail, !viewModel.showPlanTrip else {
-                restoreSheetAfterCalendar = false
-                return
-            }
+
+        guard viewModel.showSheet else {
             viewModel.showCalendar = true
+            return
         }
+
+        restoreSheetAfterCalendar = true
+        pendingCalendar = true
+        viewModel.showSheet = false
     }
-    
-    private func restoreNativeSheetAfterCalendarIfNeeded() {
-        guard restoreSheetAfterCalendar else { return }
+
+    private func presentCalendarIfPending() {
+        guard pendingCalendar else { return }
+        pendingCalendar = false
+
         guard viewModel.showDetail, !viewModel.showPlanTrip else {
             restoreSheetAfterCalendar = false
             return
         }
-        
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(0))
-            viewModel.showSheet = true
-            restoreSheetAfterCalendar = false
-        }
+        viewModel.showCalendar = true
+    }
+
+    private func restoreSheetAfterCalendarIfNeeded() {
+        guard restoreSheetAfterCalendar else { return }
+        restoreSheetAfterCalendar = false
+
+        guard viewModel.showDetail, !viewModel.showPlanTrip else { return }
+        viewModel.showSheet = true
     }
     
     private var backgroundLayer: some View {
@@ -250,9 +298,7 @@ extension ShadeMapView {
         ZStack {
             if !viewModel.showPlanTrip {
                 VStack(spacing: 0) {
-                    if viewModel.showDetail {
-                        detailTopBar
-                    } else {
+                    if !viewModel.showDetail {
                         mapHeader
                     }
                     
@@ -284,6 +330,9 @@ extension ShadeMapView {
         }
     }
     
+}
+
+extension ShadeMapView {
     @ViewBuilder
     private var planTripLayer: some View {
         if viewModel.showPlanTrip {
@@ -305,13 +354,12 @@ extension ShadeMapView {
                     viewModel.closeDetail()
                     onTripSavedNavigateToTrips()
                 }
-            )           .transition(.move(edge: .trailing).combined(with: .opacity))
-                .zIndex(10)
+            )
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+            .zIndex(10)
         }
     }
-}
 
-extension ShadeMapView {
     @ViewBuilder
     private func cardPopupOverlay(at location: CGPoint) -> some View {
         ZStack {
@@ -383,66 +431,12 @@ extension ShadeMapView {
         .padding(.top, 60)
     }
     
-    private var detailTopBar: some View {
-        HStack {
-            Button {
-                withAnimation { viewModel.selectedSpot = nil }
-                viewModel.closeDetail()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.black)
-                    .padding(12)
-                    .glassEffect(in: .circle)
-            }
-            
-            Spacer()
-            
-            Button {
-                openNativeCalendarPopover()
-            } label: {
-                Text(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted))
-                    .font(.system(size:18))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .contentShape(Capsule())
-                    .glassEffect(in: .capsule)
-            }
-            .popover(isPresented: $viewModel.showCalendar) {
-                VStack {
-                    DatePicker(
-                        "Pilih Tanggal",
-                        selection: $viewModel.selectedDate,
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.graphical)
-                }
-                .labelsHidden()
-                .datePickerStyle(.graphical)
-                .scaleEffect(0.85)
-                .padding(2)
-                .frame(width: 280, height: 250)
-                .presentationCompactAdaptation(.popover)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.left")
-                .font(.title)
-                .padding(12)
-                .opacity(0)
-        }
-        .padding(.horizontal, 16)
-    }
-    
     private var mapFooter: some View {
         Button("View Details") {
             viewModel.handleViewDetails()
         }
         .buttonStyle(.borderedProminent)
-        .tint(viewModel.currentPark.isMapped ? Color(red: 153/255, green: 69/255, blue: 236/255) : Color.gray)
+        .tint(viewModel.currentPark.isMapped ? Color.accentColor : Color.gray)
         .disabled(!viewModel.currentPark.isMapped)
         .controlSize(.large)
         .padding(.bottom, 30)

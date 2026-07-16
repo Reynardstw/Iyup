@@ -39,8 +39,6 @@ struct EditTripView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     Text(trip.parkName)
@@ -61,7 +59,11 @@ struct EditTripView: View {
             }
         }
         .background(pageBackground.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .tripToolbar(
+            title: "Trip Details",
+            trailingTitle: "Edit",
+            onTrailing: { showPlanTrip = true }
+        )
         .navigationDestination(isPresented: $showPlanTrip) {
             PlanTripView(
                 parkName: currentTrip.parkName,
@@ -82,18 +84,6 @@ struct EditTripView: View {
                 }
             )
         }
-    }
-
-    private var header: some View {
-        TripHeaderBar(
-            title: "Trip Details",
-            trailingTitle: "Edit",
-            trailingProminent: false,
-            onBack: { dismiss() },
-            onTrailing: {
-                showPlanTrip = true
-            }
-        )
     }
 
     private var mapPreview: some View {

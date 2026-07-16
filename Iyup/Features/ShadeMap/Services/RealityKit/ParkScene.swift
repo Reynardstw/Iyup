@@ -76,7 +76,7 @@ final class ParkScene {
         let markerName = "shade_\(spot.id)"
         wrapper.name = markerName
 
-        let purple = UIColor(red: 153/255, green: 69/255, blue: 236/255, alpha: 1)
+        let purple = UIColor(named: "AccentColor") ?? UIColor.systemPurple
 
         let stemMesh = MeshResource.generateCylinder(height: 1.2, radius: 0.08)
         var stemMat = PhysicallyBasedMaterial()

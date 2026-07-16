@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct ParkDetailSheetContent: View {
     let detent: PresentationDetent
@@ -8,106 +9,73 @@ struct ParkDetailSheetContent: View {
     let onPlanTrip: () -> Void
     let onSelectDay: (Int) -> Void
 
-    private let accent = Color(red: 0.60, green: 0.22, blue: 0.92)
-
     private var isLarge: Bool { detent == largeDetent }
-    private var isPeek: Bool { detent == peekDetent }
 
-    @State private var isHoursExpanded = false
+    @ScaledMetric(relativeTo: .largeTitle) private var metricValueSize: CGFloat = 40
+    @ScaledMetric(relativeTo: .title3) private var headerTitleSize: CGFloat = 20
 
-    private var cardBackground: AnyShapeStyle {
-        isLarge ? AnyShapeStyle(Color.white.opacity(0.58)) : AnyShapeStyle(.thinMaterial)
+    private var cardBackground: Color {
+        Color(.secondarySystemGroupedBackground)
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let height = geo.size.height
-            let revealStart: CGFloat = 110
-            let revealEnd: CGFloat = 200
-            let progress = min(1, max(0, (height - revealStart) / (revealEnd - revealStart)))
-
-            VStack(spacing: 0) {
-                header
-
-                planTripButton
-                    .opacity(progress)
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        infoRow
-                        weatherCards
-                        popularTimesCard
-                        addressCard
-                        outfitCard
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 40)
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    planTripButton
+                    infoRow
+                    weatherCards
+                    popularTimesCard
+                    addressCard
+                    outfitCard
                 }
-                .scrollDisabled(!isLarge)
-                .scrollContentBackground(.hidden)
-                .opacity(progress)
-
-                Spacer(minLength: 0)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .scrollDisabled(!isLarge)
             .background(isLarge ? Color(.systemGroupedBackground) : Color.clear)
+            .navigationTitle(info.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationSubtitle(info.city)
         }
     }
 
-    private var header: some View {
-        VStack(spacing: 3) {
-            Text(info.name)
-                .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(.primary)
-
-            Text(info.city)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, isPeek ? 17 : 29)
-    }
+    // MARK: - Pinned CTA
 
     private var planTripButton: some View {
         Button(action: onPlanTrip) {
             Text("Plan Trip")
                 .font(.headline)
-                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(accent)
-                .clipShape(Capsule())
-                .glassEffect(.regular, in: Capsule())
+                .frame(height: 45)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 20)
-        .padding(.top, 16)
+        .buttonStyle(.glassProminent)
+        .tint(.accentColor)
     }
+
+    // MARK: - Info capsule (custom shell)
 
     private var infoRow: some View {
         HStack(spacing: 0) {
-            infoGlassSegment(title: "Entrance", value: info.entrance, color: .primary)
-
-            infoGlassSegment(title: "Hours", value: info.hoursLabel, color: info.isOpen ? .green : .red)
-
-            infoGlassSegment(title: "Distance", value: "\(info.distanceKm) km", color: .primary)
+            infoSegment(title: "Entrance", value: info.entrance, color: .primary)
+            infoSegment(title: "Hours", value: info.hoursLabel, color: info.isOpen ? .green : .red)
+            infoSegment(title: "Distance", value: "\(info.distanceKm) km", color: .primary)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 66)
-        .background(Color.white.opacity(0.20))
+        .background(cardBackground)
         .clipShape(Capsule())
-        .glassEffect(.regular, in: Capsule())
     }
 
-    private func infoGlassSegment(title: String, value: String, color: Color) -> some View {
+    private func infoSegment(title: String, value: String, color: Color) -> some View {
         VStack(spacing: 5) {
             Text(title)
-                .font(.system(size: 13, weight: .medium))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
 
             Text(value)
-                .font(.system(size: 16, weight: .medium))
+                .font(.callout.weight(.medium))
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
@@ -115,14 +83,10 @@ struct ParkDetailSheetContent: View {
         .frame(maxWidth: .infinity)
         .frame(height: 66)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 
-    private var infoGlassDivider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.09))
-            .frame(width: 1)
-            .padding(.vertical, 14)
-    }
+    // MARK: - Metrics (custom shells, side by side)
 
     private var weatherCards: some View {
         HStack(spacing: 14) {
@@ -132,33 +96,29 @@ struct ParkDetailSheetContent: View {
     }
 
     private func metricCard(icon: String, label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                Text(label)
-                    .font(.subheadline.weight(.medium))
-            }
-            .foregroundStyle(.primary)
+        VStack(spacing: 12) {
+            Label(label, systemImage: icon)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
 
             Text(value)
-                .font(.system(size: 40, weight: .regular))
+                .font(.system(size: metricValueSize, weight: .regular))
                 .foregroundStyle(.primary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .padding(18)
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
+
+    // MARK: - Popular Times (custom shell, native innards)
 
     private var popularTimesCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: "person.3.fill")
-                Text("Popular Times")
-                    .font(.headline)
-            }
-            .foregroundStyle(.primary)
+            Label("Popular Times", systemImage: "person.3.fill")
+                .font(.headline)
+                .foregroundStyle(.primary)
 
             VStack(spacing: 10) {
                 dayTabs
@@ -173,11 +133,28 @@ struct ParkDetailSheetContent: View {
                     Spacer()
                 }
                 .padding(.horizontal, 4)
+                .accessibilityElement(children: .combine)
 
-                crowdBars
+                Chart(Array(info.popularToday.enumerated()), id: \.offset) { index, slot in
+                    BarMark(
+                        x: .value("Hour", hourLabel(forSlot: index)),
+                        y: .value("Crowd", slot.level)
+                    )
+                    .foregroundStyle(slot.isNow ? Color.red.opacity(0.7) : Color.blue.opacity(0.45))
+                    .cornerRadius(3)
+                }
+                .chartYAxis(.hidden)
+                .chartXAxis {
+                    AxisMarks(values: labeledHours) { _ in
+                        AxisValueLabel(centered: true)
+                            .font(.caption2)
+                    }
+                }
+                .frame(height: 92)
+                .accessibilityLabel("Crowd levels throughout the day")
             }
             .padding(12)
-            .background(Color.white.opacity(0.72))
+            .background(Color(.tertiarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
             HStack(spacing: 7) {
@@ -193,7 +170,6 @@ struct ParkDetailSheetContent: View {
         .padding(18)
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private var dayTabs: some View {
@@ -204,123 +180,108 @@ struct ParkDetailSheetContent: View {
                 } label: {
                     VStack(spacing: 4) {
                         Text(day)
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(index == info.todayIndex ? accent : .secondary)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(index == info.todayIndex ? Color.accentColor : .secondary)
 
-                        Rectangle()
-                            .fill(index == info.todayIndex ? accent : .clear)
+                        Capsule()
+                            .fill(index == info.todayIndex ? Color.accentColor : .clear)
                             .frame(width: 18, height: 2)
-                            .clipShape(Capsule())
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 34)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(fullDayName(index))
+                .accessibilityAddTraits(index == info.todayIndex ? [.isSelected] : [])
             }
         }
     }
 
-    private var crowdBars: some View {
-        HStack(alignment: .bottom, spacing: 5) {
-            ForEach(info.popularToday) { slot in
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(slot.isNow ? Color.red.opacity(0.7) : Color.blue.opacity(0.45))
-                    .frame(height: max(6, CGFloat(slot.level) * 70))
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .frame(height: 86)
-        .overlay(alignment: .bottom) {
-            HStack {
-                Text("6a")
-                Spacer()
-                Text("9a")
-                Spacer()
-                Text("12p")
-                Spacer()
-                Text("3p")
-                Spacer()
-                Text("6p")
-                Spacer()
-                Text("9p")
-            }
-            .font(.system(size: 8))
-            .foregroundStyle(.secondary)
-            .offset(y: 12)
-        }
-        .padding(.bottom, 14)
+    private func fullDayName(_ index: Int) -> String {
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][index]
     }
+
+    /// Hour categories that get an axis label (every 3rd slot).
+    private var labeledHours: [String] {
+        stride(from: 0, to: info.popularToday.count, by: 3).map { hourLabel(forSlot: $0) }
+    }
+
+    private var axisSlotValues: [Int] {
+        let count = info.popularToday.count
+        guard count > 0 else { return [] }
+        var values = Array(stride(from: 0, to: count, by: 3))
+        if values.last != count - 1 {
+            values.append(count - 1)
+        }
+        return values
+    }
+
+    /// Slots start at 6 AM, 1 hour each.
+    private func hourLabel(forSlot index: Int) -> String {
+        let hour = (6 + index) % 24
+        switch hour {
+        case 0: return "12a"
+        case 12: return "12p"
+        case 1...11: return "\(hour)a"
+        default: return "\(hour - 12)p"
+        }
+    }
+
+    // MARK: - Hours + Address (custom shell, native innards)
 
     private var addressCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isHoursExpanded.toggle()
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "clock")
-                        .foregroundStyle(.green)
-                    Text(info.openHoursDetail)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Image(systemName: "chevron.down")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(isHoursExpanded ? 180 : 0))
-                }
-            }
-            .buttonStyle(.plain)
-
-            if isHoursExpanded {
+            DisclosureGroup {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], id: \.self) { day in
-                        HStack {
-                            Text(day)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(info.openHoursDetail)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
+                        LabeledContent(day, value: info.openHoursDetail)
+                            .font(.footnote)
                     }
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .padding(.top, 8)
+            } label: {
+                Label {
+                    Text(info.openHoursDetail)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(info.isOpen ? .green : .red)
+                } icon: {
+                    Image(systemName: "clock")
+                        .foregroundStyle(info.isOpen ? .green : .red)
+                }
             }
+            .tint(.secondary)
 
             Divider()
 
             Button {
                 openInAppleMaps()
             } label: {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .foregroundStyle(.primary)
-                        .padding(.top, 2)
+                Label {
                     Text(info.address)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.blue)
                         .multilineTextAlignment(.leading)
+                } icon: {
+                    Image(systemName: "mappin.and.ellipse")
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
+
+    // MARK: - Outfit (custom shell)
 
     private var outfitCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "lightbulb")
-                    .font(.title3)
+            Label {
                 Text(info.outfitHeadline)
                     .font(.subheadline.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "lightbulb")
             }
 
             Divider()
@@ -331,16 +292,16 @@ struct ParkDetailSheetContent: View {
             HStack(spacing: 26) {
                 ForEach(info.outfitEmojis, id: \.self) { emoji in
                     Text(emoji)
-                        .font(.system(size: 40))
+                        .font(.largeTitle)
                 }
             }
             .frame(maxWidth: .infinity)
+            .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
         .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     private func openInAppleMaps() {

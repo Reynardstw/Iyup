@@ -116,11 +116,11 @@ Ensure you have:
 
 ## 👨‍💻 Contributors
 
-Albert Tandy
-Ezekiel Napitupulu
-Kaisa Al Haura Aina Mardi
-Reynard Setiawan
-Rosamond Patricia.
+Albert Tandy<br>
+Ezekiel Napitupulu<br>
+Kaisa Al Haura Aina Mardi<br>
+Reynard Setiawan<br>
+Rosamond Patricia
 
 ---
 

@@ -116,10 +116,14 @@ Ensure you have:
 
 ## 👨‍💻 Contributors
 
-*(to be added)*
+Albert Tandy
+Ezekiel Napitupulu
+Kaisa Al Haura Aina Mardi
+Reynard Setiawan
+Rosamond Patricia.
 
 ---
 
 ## 📄 License
 
-*(to be added)*
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
